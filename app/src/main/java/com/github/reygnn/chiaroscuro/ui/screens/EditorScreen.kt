@@ -65,7 +65,7 @@ fun EditorScreen(viewModel: EditorViewModel = viewModel()) {
                 if (state.isLoading || state.isAnalyzing) CircularProgressIndicator()
                 if (state.sourceBitmap == null && !state.isLoading) {
                     Text(
-                        text = "Kein Bild geladen\nTippe auf 📂 Laden",
+                        text = "No image loaded\nTap 📂 Load to get started",
                         style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                         textAlign = TextAlign.Center

@@ -5,7 +5,7 @@
 
     <application
         android:allowBackup="true"
-        android:label="Image Editor"
+        android:label="chiaroscruro"
         android:theme="@style/Theme.ImageEditor"
         android:supportsRtl="true">
 
