@@ -42,7 +42,7 @@ fun EditorScreen(viewModel: EditorViewModel = viewModel()) {
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Image Editor") },
+                title = { Text("Chiaroscuro") },
                 colors = TopAppBarDefaults.topAppBarColors(containerColor = MaterialTheme.colorScheme.surfaceContainer)
             )
         },
@@ -51,7 +51,7 @@ fun EditorScreen(viewModel: EditorViewModel = viewModel()) {
                 FloatingActionButton(
                     onClick = { viewModel.applyQuickAction() },
                     containerColor = MaterialTheme.colorScheme.primary
-                ) { Icon(Icons.Filled.FlashOn, contentDescription = "Schnell-Aktion") }
+                ) { Icon(Icons.Filled.FlashOn, contentDescription = "Quick Action") }
             }
         }
     ) { innerPadding ->
@@ -78,7 +78,7 @@ fun EditorScreen(viewModel: EditorViewModel = viewModel()) {
                 onRectHeightChange = viewModel::setRectHeight,
                 onToggleRect = viewModel::toggleRect,
                 onLoadImage = { openLauncher.launch(arrayOf("image/*")) },
-                onSaveTransparent = { saveLauncher.launch("bild_bearbeitet.png") },
+                onSaveTransparent = { saveLauncher.launch("edited_image.png") },
                 onAmoledThreshold = viewModel::setAmoledThreshold,
                 onToggleWarmMode = viewModel::toggleAmoledWarmMode,
                 onAnalyzeAmoled = viewModel::analyzeAmoled,

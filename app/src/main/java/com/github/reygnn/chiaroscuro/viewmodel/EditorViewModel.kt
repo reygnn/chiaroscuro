@@ -2,6 +2,7 @@ package com.github.reygnn.chiaroscuro.viewmodel
 
 import android.content.Context
 import android.graphics.Bitmap
+import androidx.core.graphics.createBitmap
 import android.graphics.Color
 import android.net.Uri
 import androidx.compose.ui.geometry.Offset
@@ -31,7 +32,21 @@ class EditorViewModel : ViewModel() {
                     android.graphics.BitmapFactory.decodeStream(stream)
                 }
             }
-            _state.update { it.copy(sourceBitmap = bitmap, rectOffset = Offset.Zero, isLoading = false) }
+            _state.update { current ->
+                current.copy(
+                    sourceBitmap = bitmap,
+                    // Reset alles beim neuen Bild
+                    rectOffset = Offset.Zero,
+                    rectVisible = false,
+                    amoledThreshold = 10,
+                    amoledWarmMode = false,
+                    amoledAnalysisBitmap = null,
+                    showAmoledOverlay = false,
+                    amoledPixelCount = 0,
+                    amoledPercent = 0f,
+                    isLoading = false
+                )
+            }
         }
     }
 
@@ -108,10 +123,8 @@ class EditorViewModel : ViewModel() {
                 var nearBlack = 0
                 for (i in pixels.indices) {
                     val r = Color.red(pixels[i]); val g = Color.green(pixels[i]); val b = Color.blue(pixels[i])
-                    val hit = if (warmMode)
-                        r <= threshold && g <= threshold && b <= threshold && (r - b) > 3 && !(r == 0 && g == 0 && b == 0)
-                    else
-                        r <= threshold && g <= threshold && b <= threshold && !(r == 0 && g == 0 && b == 0)
+                    val isNearBlack = r <= threshold && g <= threshold && b <= threshold && (r > 0 || g > 0 || b > 0)
+                    val hit = if (warmMode) isNearBlack && (r - b) > 3 else isNearBlack
                     if (hit) { pixels[i] = Color.RED; nearBlack++ }
                 }
                 val result = src.copy(Bitmap.Config.ARGB_8888, true)
@@ -146,7 +159,7 @@ class EditorViewModel : ViewModel() {
                         r <= threshold && g <= threshold && b <= threshold
                     if (hit) pixels[i] = Color.BLACK
                 }
-                val result = src.copy(Bitmap.Config.ARGB_8888, true)
+                val result = createBitmap(w, h)
                 result.setPixels(pixels, 0, w, 0, 0, w, h)
                 result
             }
@@ -154,7 +167,7 @@ class EditorViewModel : ViewModel() {
                 sourceBitmap = corrected, isAnalyzing = false,
                 amoledAnalysisBitmap = null, showAmoledOverlay = false,
                 amoledPixelCount = 0, amoledPercent = 0f,
-                exportMessage = "✅ AMOLED-Korrektur angewendet"
+                exportMessage = "✅ AMOLED correction applied"
             )}
         }
     }
@@ -188,14 +201,14 @@ class EditorViewModel : ViewModel() {
                     for (i in pixels.indices) {
                         if (pixels[i] == Color.BLACK) pixels[i] = Color.TRANSPARENT
                     }
-                    val result = Bitmap.createBitmap(w, h, Bitmap.Config.ARGB_8888)
+                    val result = createBitmap(w, h)
                     result.setPixels(pixels, 0, w, 0, 0, w, h)
                     context.contentResolver.openOutputStream(uri)?.use { out ->
                         result.compress(Bitmap.CompressFormat.PNG, 100, out)
                     }
-                    _state.update { it.copy(exportMessage = "✅ Gespeichert!") }
+                    _state.update { it.copy(exportMessage = "✅ Saved!") }
                 } catch (e: Exception) {
-                    _state.update { it.copy(exportMessage = "❌ Fehler: ${e.message}") }
+                    _state.update { it.copy(exportMessage = "❌ Error: ${e.message}") }
                 }
             }
         }

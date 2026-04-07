@@ -38,19 +38,19 @@ fun BottomControls(
                 .verticalScroll(rememberScrollState()),
             verticalArrangement = Arrangement.spacedBy(8.dp)
         ) {
-            // ── Schwarzes Rechteck ───────────────────────────────
+            // ── Black Rectangle ───────────────────────────────
             Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth()) {
-                Text("Rechteck", style = MaterialTheme.typography.labelMedium, modifier = Modifier.weight(1f))
+                Text("Rectangle", style = MaterialTheme.typography.labelMedium, modifier = Modifier.weight(1f))
                 FilterChip(
                     selected = state.rectVisible,
                     onClick = onToggleRect,
-                    label = { Text(if (state.rectVisible) "Aktiv" else "Inaktiv") }
+                    label = { Text(if (state.rectVisible) "Active" else "Inactive") }
                 )
             }
             if (state.rectVisible) {
-                SliderRow("Breite", state.rectWidth,  10..2000, onRectWidthChange)
-                SliderRow("Höhe",   state.rectHeight, 10..2000, onRectHeightChange)
-                Text("👆 Ziehe das Rechteck auf dem Bild",
+                SliderRow("Width", state.rectWidth,  10..2000, onRectWidthChange)
+                SliderRow("Height",   state.rectHeight, 10..2000, onRectHeightChange)
+                Text("👆 \"Drag the rectangle to position it",
                     style = MaterialTheme.typography.labelSmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant)
             }
@@ -59,19 +59,19 @@ fun BottomControls(
 
             // ── AMOLED Analyse ───────────────────────────────────
             Text("AMOLED", style = MaterialTheme.typography.labelMedium)
-            SliderRow("Schwelle", state.amoledThreshold, 0..50, onAmoledThreshold)
+            SliderRow("Threshold", state.amoledThreshold, 0..50, onAmoledThreshold)
             Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth()) {
-                Text("🌡 Warm-Stich", style = MaterialTheme.typography.labelMedium, modifier = Modifier.weight(1f))
+                Text("🌡 Warm Tint", style = MaterialTheme.typography.labelMedium, modifier = Modifier.weight(1f))
                 Switch(checked = state.amoledWarmMode, onCheckedChange = { onToggleWarmMode() })
             }
             Text(
-                if (state.amoledWarmMode) "Nur warme Dunkeltöne (R-B>3) → Schatten bleiben erhalten"
-                else "Empfehlung: 5–15 für Schatten erhalten, 30–50 aggressiv",
+                if (state.amoledWarmMode) "Warm dark tones only (R-B>3) — shadows preserved"
+                else "Recommended: 5–15 to preserve shadows, 30–50 aggressive",
                 style = MaterialTheme.typography.labelSmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
             if (state.amoledPixelCount > 0) {
-                Text("🔴 ${state.amoledPixelCount} Pixel (${String.format("%.1f", state.amoledPercent)}%) fast-schwarz",
+                Text("🔴 ${state.amoledPixelCount} pixels (${String.format("%.1f", state.amoledPercent)}%) near-black",
                     style = MaterialTheme.typography.labelSmall,
                     color = MaterialTheme.colorScheme.error)
             }
@@ -84,11 +84,11 @@ fun BottomControls(
                     ) {
                         if (state.isAnalyzing)
                             CircularProgressIndicator(modifier = Modifier.size(16.dp), strokeWidth = 2.dp)
-                        else Text("🔍 Analysieren")
+                        else Text("🔍 Analyze")
                     }
                 } else {
-                    OutlinedButton(onClick = onClearAmoled, modifier = Modifier.weight(1f)) { Text("✕ Zurück") }
-                    Button(onClick = onApplyAmoled, modifier = Modifier.weight(1f)) { Text("✅ Korrigieren") }
+                    OutlinedButton(onClick = onClearAmoled, modifier = Modifier.weight(1f)) { Text("✕ Cancel") }
+                    Button(onClick = onApplyAmoled, modifier = Modifier.weight(1f)) { Text("✅ Apply") }
                 }
             }
 
@@ -96,12 +96,12 @@ fun BottomControls(
 
             // ── Laden / Speichern ────────────────────────────────
             Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                OutlinedButton(onClick = onLoadImage, modifier = Modifier.weight(1f)) { Text("📂 Laden") }
+                OutlinedButton(onClick = onLoadImage, modifier = Modifier.weight(1f)) { Text("📂 Load") }
                 Button(
                     onClick = onSaveTransparent,
                     enabled = state.sourceBitmap != null,
                     modifier = Modifier.weight(1f)
-                ) { Text("💾 Speichern") }
+                ) { Text("💾 Save") }
             }
         }
     }
