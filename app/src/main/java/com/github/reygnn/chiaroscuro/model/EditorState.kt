@@ -20,5 +20,6 @@ data class EditorState(
     val showAmoledOverlay: Boolean = false,
     // UI
     val isLoading: Boolean = false,
-    val exportMessage: String? = null
+    val exportMessage: String? = null,
+    val proposedFilename: String? = null
 )

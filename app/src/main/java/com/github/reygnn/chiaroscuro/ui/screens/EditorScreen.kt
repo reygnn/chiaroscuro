@@ -6,12 +6,14 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.*
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.FlashOn
+import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.github.reygnn.chiaroscuro.ui.components.BottomControls
@@ -20,14 +22,20 @@ import com.github.reygnn.chiaroscuro.viewmodel.EditorViewModel
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun EditorScreen(viewModel: EditorViewModel = viewModel()) {
+fun EditorScreen(
+    onOpenPreferences: () -> Unit,
+    viewModel: EditorViewModel = viewModel()
+) {
     val state by viewModel.state.collectAsStateWithLifecycle()
     val context = LocalContext.current
+    var menuExpanded by remember { mutableStateOf(false) }
 
+    // SAF: Load image
     val openLauncher = rememberLauncherForActivityResult(
         ActivityResultContracts.OpenDocument()
     ) { uri -> uri?.let { viewModel.loadImage(context, it) } }
 
+    // SAF: Save – uses proposedFilename if set
     val saveLauncher = rememberLauncherForActivityResult(
         ActivityResultContracts.CreateDocument("image/png")
     ) { uri -> uri?.let { viewModel.saveTransparent(context, it) } }
@@ -39,11 +47,34 @@ fun EditorScreen(viewModel: EditorViewModel = viewModel()) {
         }
     }
 
+    // Auto-open save dialog when FAB sets a proposed filename
+    LaunchedEffect(state.proposedFilename) {
+        state.proposedFilename?.let { name ->
+            saveLauncher.launch(name)
+        }
+    }
+
     Scaffold(
         topBar = {
             TopAppBar(
                 title = { Text("Chiaroscuro") },
-                colors = TopAppBarDefaults.topAppBarColors(containerColor = MaterialTheme.colorScheme.surfaceContainer)
+                colors = TopAppBarDefaults.topAppBarColors(
+                    containerColor = MaterialTheme.colorScheme.surfaceContainer
+                ),
+                actions = {
+                    IconButton(onClick = { menuExpanded = true }) {
+                        Icon(Icons.Filled.MoreVert, contentDescription = "Menu")
+                    }
+                    DropdownMenu(
+                        expanded = menuExpanded,
+                        onDismissRequest = { menuExpanded = false }
+                    ) {
+                        DropdownMenuItem(
+                            text = { Text("Preferences") },
+                            onClick = { menuExpanded = false; onOpenPreferences() }
+                        )
+                    }
+                }
             )
         },
         floatingActionButton = {
@@ -51,7 +82,9 @@ fun EditorScreen(viewModel: EditorViewModel = viewModel()) {
                 FloatingActionButton(
                     onClick = { viewModel.applyQuickAction() },
                     containerColor = MaterialTheme.colorScheme.primary
-                ) { Icon(Icons.Filled.FlashOn, contentDescription = "Quick Action") }
+                ) {
+                    Icon(Icons.Filled.FlashOn, contentDescription = "Quick Action")
+                }
             }
         }
     ) { innerPadding ->
