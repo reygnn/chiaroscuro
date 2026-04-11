@@ -4,6 +4,7 @@ import android.content.Context
 import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.booleanPreferencesKey
+import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.floatPreferencesKey
 import androidx.datastore.preferences.core.intPreferencesKey
@@ -26,7 +27,8 @@ data class AppPrefs(
     val rectWidth: Int           = 57,
     val rectHeight: Int          = 57,
     // Sleeve counter
-    val sleeveCounter: Int       = 1
+    val sleeveCounter: Int       = 1,
+    val filenamePrefix: String     = "sleeve"
 )
 
 object PrefsKeys {
@@ -39,6 +41,7 @@ object PrefsKeys {
     val RECT_WIDTH        = intPreferencesKey("rect_width")
     val RECT_HEIGHT       = intPreferencesKey("rect_height")
     val SLEEVE_COUNTER    = intPreferencesKey("sleeve_counter")
+    val FILENAME_PREFIX   = stringPreferencesKey("filename_prefix")
 }
 
 class AppPreferences(private val context: Context) {
@@ -53,7 +56,8 @@ class AppPreferences(private val context: Context) {
             rectY           = p[PrefsKeys.RECT_Y]            ?: 1291f,
             rectWidth       = p[PrefsKeys.RECT_WIDTH]        ?: 57,
             rectHeight      = p[PrefsKeys.RECT_HEIGHT]       ?: 57,
-            sleeveCounter   = p[PrefsKeys.SLEEVE_COUNTER]    ?: 1
+            sleeveCounter   = p[PrefsKeys.SLEEVE_COUNTER]    ?: 1,
+            filenamePrefix  = p[PrefsKeys.FILENAME_PREFIX]  ?: "sleeve"
         )
     }
 
@@ -67,4 +71,6 @@ class AppPreferences(private val context: Context) {
     suspend fun setRectHeight(v: Int)         = context.dataStore.edit { it[PrefsKeys.RECT_HEIGHT]       = v }
     suspend fun incrementCounter()            = context.dataStore.edit { it[PrefsKeys.SLEEVE_COUNTER]    = (it[PrefsKeys.SLEEVE_COUNTER] ?: 1) + 1 }
     suspend fun resetCounter()                = context.dataStore.edit { it[PrefsKeys.SLEEVE_COUNTER]    = 1 }
-}
+    suspend fun setCounter(v: Int)            = context.dataStore.edit { it[PrefsKeys.SLEEVE_COUNTER]    = v.coerceAtLeast(1) }
+    suspend fun setFilenamePrefix(v: String)  = context.dataStore.edit { it[PrefsKeys.FILENAME_PREFIX]  = v.ifBlank { "converted_pic" } }
+ }

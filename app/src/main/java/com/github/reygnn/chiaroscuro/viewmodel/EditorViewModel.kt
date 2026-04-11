@@ -27,21 +27,46 @@ class EditorViewModel(app: Application) : AndroidViewModel(app) {
     private val _state = MutableStateFlow(EditorState())
     val state: StateFlow<EditorState> = _state.asStateFlow()
 
+    // ── Init: load all settings from Preferences ─────────────────
+    init {
+        viewModelScope.launch {
+            val p = prefs.prefs.first()
+            _state.update { it.copy(
+                amoledThreshold = p.amoledThreshold,
+                amoledWarmMode  = p.amoledWarmMode,
+                rectWidth       = p.rectWidth,
+                rectHeight      = p.rectHeight,
+                rectOffset      = Offset(p.rectX, p.rectY)
+            )}
+        }
+    }
+
     // ── Bild laden ──────────────────────────────────────────────
     fun loadImage(context: Context, uri: Uri) {
         viewModelScope.launch {
-            _state.update { _ -> EditorState(isLoading = true) }
+            val p = prefs.prefs.first()
+            _state.update { _ ->
+                EditorState(
+                    isLoading       = false,
+                    amoledThreshold = p.amoledThreshold,
+                    amoledWarmMode  = p.amoledWarmMode,
+                    rectWidth       = p.rectWidth,
+                    rectHeight      = p.rectHeight,
+                    rectOffset      = Offset(p.rectX, p.rectY)
+                )
+            }
             val bitmap = withContext(Dispatchers.IO) {
                 context.contentResolver.openInputStream(uri)?.use { stream ->
                     android.graphics.BitmapFactory.decodeStream(stream)
                 }
             }
-            _state.update { _ -> EditorState(sourceBitmap = bitmap) }
+            _state.update { it.copy(sourceBitmap = bitmap) }
         }
     }
 
     // ── Schwarzes Rechteck ───────────────────────────────────────
     fun setRectWidth(value: Int) {
+        viewModelScope.launch { prefs.setRectWidth(value) }
         _state.update { current ->
             val maxX = ((current.sourceBitmap?.width ?: 200) - value).coerceAtLeast(0).toFloat()
             current.copy(rectWidth = value, rectOffset = current.rectOffset.copy(x = current.rectOffset.x.coerceAtMost(maxX)))
@@ -49,6 +74,7 @@ class EditorViewModel(app: Application) : AndroidViewModel(app) {
     }
 
     fun setRectHeight(value: Int) {
+        viewModelScope.launch { prefs.setRectHeight(value) }
         _state.update { current ->
             val maxY = ((current.sourceBitmap?.height ?: 200) - value).coerceAtLeast(0).toFloat()
             current.copy(rectHeight = value, rectOffset = current.rectOffset.copy(y = current.rectOffset.y.coerceAtMost(maxY)))
@@ -59,10 +85,15 @@ class EditorViewModel(app: Application) : AndroidViewModel(app) {
         _state.update { current ->
             val maxX = ((current.sourceBitmap?.width ?: 200) - current.rectWidth).coerceAtLeast(0).toFloat()
             val maxY = ((current.sourceBitmap?.height ?: 200) - current.rectHeight).coerceAtLeast(0).toFloat()
-            current.copy(rectOffset = Offset(
+            val newOffset = Offset(
                 (current.rectOffset.x + delta.x).coerceIn(0f, maxX),
                 (current.rectOffset.y + delta.y).coerceIn(0f, maxY)
-            ))
+            )
+            viewModelScope.launch {
+                prefs.setRectX(newOffset.x)
+                prefs.setRectY(newOffset.y)
+            }
+            current.copy(rectOffset = newOffset)
         }
     }
 
@@ -79,61 +110,16 @@ class EditorViewModel(app: Application) : AndroidViewModel(app) {
         }
     }
 
-    // ── FAB – runs all enabled steps from Preferences ────────────
-    fun applyQuickAction() {
-        viewModelScope.launch {
-            val p = prefs.prefs.first()
-            val src = _state.value.sourceBitmap ?: return@launch
-
-            _state.update { it.copy(isAnalyzing = true) }
-
-            var current = src
-
-            // Step 1: AMOLED correction
-            if (p.fabApplyAmoled) {
-                current = withContext(Dispatchers.IO) {
-                    applyAmoled(current, p.amoledThreshold, p.amoledWarmMode)
-                }
-            }
-
-            // Step 2: Place rectangle
-            val rectVisible = p.fabPlaceRect
-            val rectOffset  = Offset(p.rectX, p.rectY)
-
-            _state.update { it.copy(
-                sourceBitmap = current,
-                isAnalyzing  = false,
-                rectVisible  = rectVisible,
-                rectWidth    = p.rectWidth,
-                rectHeight   = p.rectHeight,
-                rectOffset   = rectOffset,
-                proposedFilename = nextSleeveName(p.sleeveCounter)
-            )}
-        }
-    }
-
-    private fun applyAmoled(src: Bitmap, threshold: Int, warmMode: Boolean): Bitmap {
-        val w = src.width; val h = src.height
-        val pixels = IntArray(w * h)
-        src.getPixels(pixels, 0, w, 0, 0, w, h)
-        for (i in pixels.indices) {
-            val r = Color.red(pixels[i]); val g = Color.green(pixels[i]); val b = Color.blue(pixels[i])
-            val isNearBlack = r <= threshold && g <= threshold && b <= threshold && (r > 0 || g > 0 || b > 0)
-            val hit = if (warmMode) isNearBlack && (r - b) > 3 else isNearBlack
-            if (hit) pixels[i] = Color.BLACK
-        }
-        val result = src.copy(Bitmap.Config.ARGB_8888, true)
-        result.setPixels(pixels, 0, w, 0, 0, w, h)
-        return result
-    }
-
-    // ── AMOLED manual ────────────────────────────────────────────
+    // ── AMOLED ───────────────────────────────────────────────────
     fun setAmoledThreshold(value: Int) {
+        viewModelScope.launch { prefs.setAmoledThreshold(value) }
         _state.update { it.copy(amoledThreshold = value, amoledAnalysisBitmap = null, showAmoledOverlay = false) }
     }
 
     fun toggleAmoledWarmMode() {
-        _state.update { it.copy(amoledWarmMode = !it.amoledWarmMode, amoledAnalysisBitmap = null, showAmoledOverlay = false) }
+        val newValue = !_state.value.amoledWarmMode
+        viewModelScope.launch { prefs.setAmoledWarmMode(newValue) }
+        _state.update { it.copy(amoledWarmMode = newValue, amoledAnalysisBitmap = null, showAmoledOverlay = false) }
     }
 
     fun analyzeAmoled() {
@@ -187,6 +173,45 @@ class EditorViewModel(app: Application) : AndroidViewModel(app) {
         _state.update { it.copy(amoledAnalysisBitmap = null, showAmoledOverlay = false, amoledPixelCount = 0, amoledPercent = 0f) }
     }
 
+    // ── FAB ──────────────────────────────────────────────────────
+    fun applyQuickAction() {
+        viewModelScope.launch {
+            val p = prefs.prefs.first()
+            val src = _state.value.sourceBitmap ?: return@launch
+            _state.update { it.copy(isAnalyzing = true) }
+            var current = src
+            if (p.fabApplyAmoled) {
+                current = withContext(Dispatchers.IO) {
+                    applyAmoled(current, p.amoledThreshold, p.amoledWarmMode)
+                }
+            }
+            _state.update { it.copy(
+                sourceBitmap     = current,
+                isAnalyzing      = false,
+                rectVisible      = p.fabPlaceRect,
+                rectWidth        = p.rectWidth,
+                rectHeight       = p.rectHeight,
+                rectOffset       = Offset(p.rectX, p.rectY),
+                proposedFilename = nextSleeveName(p.sleeveCounter, p.filenamePrefix)
+            )}
+        }
+    }
+
+    private fun applyAmoled(src: Bitmap, threshold: Int, warmMode: Boolean): Bitmap {
+        val w = src.width; val h = src.height
+        val pixels = IntArray(w * h)
+        src.getPixels(pixels, 0, w, 0, 0, w, h)
+        for (i in pixels.indices) {
+            val r = Color.red(pixels[i]); val g = Color.green(pixels[i]); val b = Color.blue(pixels[i])
+            val isNearBlack = r <= threshold && g <= threshold && b <= threshold && (r > 0 || g > 0 || b > 0)
+            val hit = if (warmMode) isNearBlack && (r - b) > 3 else isNearBlack
+            if (hit) pixels[i] = Color.BLACK
+        }
+        val result = src.copy(Bitmap.Config.ARGB_8888, true)
+        result.setPixels(pixels, 0, w, 0, 0, w, h)
+        return result
+    }
+
     // ── Export ───────────────────────────────────────────────────
     fun saveTransparent(context: Context, uri: Uri) {
         viewModelScope.launch {
@@ -215,7 +240,6 @@ class EditorViewModel(app: Application) : AndroidViewModel(app) {
                     context.contentResolver.openOutputStream(uri)?.use { out ->
                         result.compress(Bitmap.CompressFormat.PNG, 100, out)
                     }
-                    // Increment counter after successful save
                     prefs.incrementCounter()
                     _state.update { it.copy(exportMessage = "✅ Saved!", proposedFilename = null) }
                 } catch (e: Exception) {
@@ -229,5 +253,5 @@ class EditorViewModel(app: Application) : AndroidViewModel(app) {
         _state.update { it.copy(exportMessage = null) }
     }
 
-    private fun nextSleeveName(counter: Int) = "sleeve_${counter.toString().padStart(3, '0')}.png"
+    private fun nextSleeveName(counter: Int, prefix: String = "sleeve") = "${prefix}_${counter.toString().padStart(3, '0')}.png"
 }

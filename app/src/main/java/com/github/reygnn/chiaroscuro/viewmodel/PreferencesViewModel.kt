@@ -28,4 +28,6 @@ class PreferencesViewModel(app: Application) : AndroidViewModel(app) {
     fun setRectWidth(v: Int)          = viewModelScope.launch { prefs.setRectWidth(v) }
     fun setRectHeight(v: Int)         = viewModelScope.launch { prefs.setRectHeight(v) }
     fun resetCounter()                = viewModelScope.launch { prefs.resetCounter() }
+    fun setCounter(v: Int)            = viewModelScope.launch { prefs.setCounter(v) }
+    fun setFilenamePrefix(v: String) = viewModelScope.launch { prefs.setFilenamePrefix(v) }
 }

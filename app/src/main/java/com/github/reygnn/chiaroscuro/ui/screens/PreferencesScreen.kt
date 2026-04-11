@@ -44,8 +44,9 @@ fun PreferencesScreen(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(innerPadding)
-                .padding(horizontal = 20.dp, vertical = 16.dp)
-                .verticalScroll(rememberScrollState()),
+                .imePadding()
+                .verticalScroll(rememberScrollState())
+                .padding(horizontal = 20.dp, vertical = 16.dp),
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
 
@@ -65,24 +66,27 @@ fun PreferencesScreen(
 
             // ── Rectangle ────────────────────────────────────────
             SectionTitle("Black Rectangle")
-            NumberRow("X",      prefs.rectX.toInt())      { vm.setRectX(it.toFloat()) }
-            NumberRow("Y",      prefs.rectY.toInt())      { vm.setRectY(it.toFloat()) }
-            NumberRow("Width",  prefs.rectWidth)          { vm.setRectWidth(it) }
-            NumberRow("Height", prefs.rectHeight)         { vm.setRectHeight(it) }
+            PixelRow("X",      prefs.rectX.toInt())  { vm.setRectX(it.toFloat()) }
+            PixelRow("Y",      prefs.rectY.toInt())  { vm.setRectY(it.toFloat()) }
+            PixelRow("Width",  prefs.rectWidth)      { vm.setRectWidth(it) }
+            PixelRow("Height", prefs.rectHeight)     { vm.setRectHeight(it) }
 
             HorizontalDivider()
 
             // ── Sleeve Counter ───────────────────────────────────
             SectionTitle("Sleeve Counter")
-            Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth()) {
-                Text(
-                    "Next file: sleeve_${prefs.sleeveCounter.toString().padStart(3, '0')}.png",
-                    style = MaterialTheme.typography.bodyMedium,
-                    modifier = Modifier.weight(1f)
-                )
-                OutlinedButton(onClick = { vm.resetCounter() }) {
-                    Text("Reset to 001")
-                }
+            Text(
+                "Next file: ${prefs.filenamePrefix}_${prefs.sleeveCounter.toString().padStart(3, '0')}.png",
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+            TextRow("Filename prefix", prefs.filenamePrefix) { vm.setFilenamePrefix(it) }
+            NumberRow("Counter", prefs.sleeveCounter) { vm.setCounter(it) }
+            OutlinedButton(
+                onClick = { vm.resetCounter() },
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Text("Reset counter to 001")
             }
         }
     }
@@ -117,7 +121,7 @@ private fun SliderRow(label: String, value: Int, range: IntRange, onValueChange:
 }
 
 @Composable
-private fun NumberRow(label: String, value: Int, onValueChange: (Int) -> Unit) {
+private fun PixelRow(label: String, value: Int, onValueChange: (Int) -> Unit) {
     var text by remember(value) { mutableStateOf(value.toString()) }
     Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth()) {
         Text(label, style = MaterialTheme.typography.bodyMedium, modifier = Modifier.width(80.dp))
@@ -131,6 +135,37 @@ private fun NumberRow(label: String, value: Int, onValueChange: (Int) -> Unit) {
             singleLine = true,
             modifier = Modifier.weight(1f),
             suffix = { Text("px", style = MaterialTheme.typography.labelSmall) }
+        )
+    }
+}
+
+@Composable
+private fun NumberRow(label: String, value: Int, onValueChange: (Int) -> Unit) {
+    var text by remember(value) { mutableStateOf(value.toString()) }
+    Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth()) {
+        Text(label, style = MaterialTheme.typography.bodyMedium, modifier = Modifier.width(80.dp))
+        OutlinedTextField(
+            value = text,
+            onValueChange = { input ->
+                text = input
+                input.toIntOrNull()?.let { onValueChange(it) }
+            },
+            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+            singleLine = true,
+            modifier = Modifier.weight(1f)
+        )
+    }
+}
+
+@Composable
+private fun TextRow(label: String, value: String, onValueChange: (String) -> Unit) {
+    Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth()) {
+        Text(label, style = MaterialTheme.typography.bodyMedium, modifier = Modifier.width(80.dp))
+        OutlinedTextField(
+            value = value,
+            onValueChange = onValueChange,
+            singleLine = true,
+            modifier = Modifier.weight(1f)
         )
     }
 }
