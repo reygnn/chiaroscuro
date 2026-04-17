@@ -1,33 +1,70 @@
 package com.github.reygnn.chiaroscuro.viewmodel
 
-import android.app.Application
-import androidx.lifecycle.AndroidViewModel
+import androidx.lifecycle.ViewModel
+import androidx.lifecycle.ViewModelProvider
+import androidx.lifecycle.ViewModelProvider.AndroidViewModelFactory.Companion.APPLICATION_KEY
 import androidx.lifecycle.viewModelScope
-import com.github.reygnn.chiaroscuro.preferences.AppPreferences
-import com.github.reygnn.chiaroscuro.preferences.AppPrefs
+import androidx.lifecycle.viewmodel.initializer
+import androidx.lifecycle.viewmodel.viewModelFactory
+import com.github.reygnn.chiaroscuro.ChiaroscuroApplication
+import com.github.reygnn.chiaroscuro.preferences.PreferencesRepository
+import com.github.reygnn.chiaroscuro.preferences.UserPreferences
 import kotlinx.coroutines.flow.SharingStarted
+import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 
-class PreferencesViewModel(app: Application) : AndroidViewModel(app) {
+class PreferencesViewModel(
+    private val repository: PreferencesRepository,
+) : ViewModel() {
 
-    private val prefs = AppPreferences(app)
-
-    val appPrefs = prefs.prefs.stateIn(
+    val appPrefs: StateFlow<UserPreferences> = repository.settings.stateIn(
         scope = viewModelScope,
-        started = SharingStarted.Companion.WhileSubscribed(5_000),
-        initialValue = AppPrefs()
+        started = SharingStarted.WhileSubscribed(SUBSCRIPTION_TIMEOUT_MS),
+        initialValue = UserPreferences(),
     )
 
-    fun setAmoledThreshold(v: Int)    = viewModelScope.launch { prefs.setAmoledThreshold(v) }
-    fun setAmoledWarmMode(v: Boolean) = viewModelScope.launch { prefs.setAmoledWarmMode(v) }
-    fun setFabApplyAmoled(v: Boolean) = viewModelScope.launch { prefs.setFabApplyAmoled(v) }
-    fun setFabPlaceRect(v: Boolean)   = viewModelScope.launch { prefs.setFabPlaceRect(v) }
-    fun setRectX(v: Float)            = viewModelScope.launch { prefs.setRectX(v) }
-    fun setRectY(v: Float)            = viewModelScope.launch { prefs.setRectY(v) }
-    fun setRectWidth(v: Int)          = viewModelScope.launch { prefs.setRectWidth(v) }
-    fun setRectHeight(v: Int)         = viewModelScope.launch { prefs.setRectHeight(v) }
-    fun resetCounter()                = viewModelScope.launch { prefs.resetCounter() }
-    fun setCounter(v: Int)            = viewModelScope.launch { prefs.setCounter(v) }
-    fun setFilenamePrefix(v: String) = viewModelScope.launch { prefs.setFilenamePrefix(v) }
+    fun setAmoledThreshold(value: Int) =
+        viewModelScope.launch { repository.setAmoledThreshold(value) }
+
+    fun setAmoledWarmMode(enabled: Boolean) =
+        viewModelScope.launch { repository.setAmoledWarmMode(enabled) }
+
+    fun setFabApplyAmoled(enabled: Boolean) =
+        viewModelScope.launch { repository.setFabApplyAmoled(enabled) }
+
+    fun setFabPlaceRect(enabled: Boolean) =
+        viewModelScope.launch { repository.setFabPlaceRect(enabled) }
+
+    fun setRectX(value: Float) =
+        viewModelScope.launch { repository.setRectX(value) }
+
+    fun setRectY(value: Float) =
+        viewModelScope.launch { repository.setRectY(value) }
+
+    fun setRectWidth(value: Int) =
+        viewModelScope.launch { repository.setRectWidth(value) }
+
+    fun setRectHeight(value: Int) =
+        viewModelScope.launch { repository.setRectHeight(value) }
+
+    fun setCounter(value: Int) =
+        viewModelScope.launch { repository.setCounter(value) }
+
+    fun resetCounter() =
+        viewModelScope.launch { repository.resetCounter() }
+
+    fun setFilenamePrefix(value: String) =
+        viewModelScope.launch { repository.setFilenamePrefix(value) }
+
+    companion object {
+        private const val SUBSCRIPTION_TIMEOUT_MS = 5_000L
+
+        val Factory: ViewModelProvider.Factory = viewModelFactory {
+            initializer {
+                val app = this[APPLICATION_KEY] as ChiaroscuroApplication
+                PreferencesViewModel(app.preferencesRepository)
+            }
+        }
+    }
 }
