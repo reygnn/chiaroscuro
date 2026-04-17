@@ -28,9 +28,12 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.github.reygnn.chiaroscuro.R
+import com.github.reygnn.chiaroscuro.model.ExportMessage
 import com.github.reygnn.chiaroscuro.ui.components.AppIcons
 import com.github.reygnn.chiaroscuro.ui.components.BottomControls
 import com.github.reygnn.chiaroscuro.ui.components.ImageCanvas
@@ -48,17 +51,24 @@ fun EditorScreen(
     val context = LocalContext.current
     var menuExpanded by remember { mutableStateOf(false) }
 
+    val defaultExportFilename = stringResource(R.string.export_default_filename)
+
     val openLauncher = rememberLauncherForActivityResult(
-        ActivityResultContracts.OpenDocument()
+        ActivityResultContracts.OpenDocument(),
     ) { uri -> uri?.let { viewModel.loadImage(context, it) } }
 
     val saveLauncher = rememberLauncherForActivityResult(
-        ActivityResultContracts.CreateDocument("image/png")
+        ActivityResultContracts.CreateDocument("image/png"),
     ) { uri -> uri?.let { viewModel.saveTransparent(context, it) } }
 
     LaunchedEffect(state.exportMessage) {
         state.exportMessage?.let { msg ->
-            Toast.makeText(context, msg, Toast.LENGTH_SHORT).show()
+            val text = when (msg) {
+                is ExportMessage.Saved          -> context.getString(R.string.msg_saved)
+                is ExportMessage.AmoledApplied  -> context.getString(R.string.msg_amoled_applied)
+                is ExportMessage.Error          -> context.getString(R.string.msg_error, msg.throwableMessage.orEmpty())
+            }
+            Toast.makeText(context, text, Toast.LENGTH_SHORT).show()
             viewModel.clearExportMessage()
         }
     }
@@ -70,20 +80,20 @@ fun EditorScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Chiaroscuro") },
+                title = { Text(stringResource(R.string.app_name)) },
                 colors = TopAppBarDefaults.topAppBarColors(
                     containerColor = MaterialTheme.colorScheme.surfaceContainer,
                 ),
                 actions = {
                     IconButton(onClick = { menuExpanded = true }) {
-                        Icon(AppIcons.MoreVert, contentDescription = "Menu")
+                        Icon(AppIcons.MoreVert, contentDescription = stringResource(R.string.cd_menu))
                     }
                     DropdownMenu(
                         expanded = menuExpanded,
                         onDismissRequest = { menuExpanded = false },
                     ) {
                         DropdownMenuItem(
-                            text = { Text("Preferences") },
+                            text = { Text(stringResource(R.string.menu_preferences)) },
                             onClick = { menuExpanded = false; onOpenPreferences() },
                         )
                     }
@@ -96,7 +106,10 @@ fun EditorScreen(
                     onClick = { viewModel.applyQuickAction() },
                     containerColor = MaterialTheme.colorScheme.primary,
                 ) {
-                    Icon(AppIcons.FlashOn, contentDescription = "Quick Action")
+                    Icon(
+                        AppIcons.FlashOn,
+                        contentDescription = stringResource(R.string.cd_quick_action),
+                    )
                 }
             }
         },
@@ -117,7 +130,7 @@ fun EditorScreen(
                 }
                 if (sourceBitmap == null && !state.isLoading) {
                     Text(
-                        text = "No image loaded\nTap 📂 Load to get started",
+                        text = stringResource(R.string.editor_empty_state),
                         style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                         textAlign = TextAlign.Center,
@@ -131,7 +144,7 @@ fun EditorScreen(
                 onRectHeightChange = viewModel::setRectHeight,
                 onToggleRect       = viewModel::toggleRect,
                 onLoadImage        = { openLauncher.launch(arrayOf("image/*")) },
-                onSaveTransparent  = { saveLauncher.launch("edited_image.png") },
+                onSaveTransparent  = { saveLauncher.launch(defaultExportFilename) },
                 onAmoledThreshold  = viewModel::setAmoledThreshold,
                 onToggleWarmMode   = viewModel::toggleAmoledWarmMode,
                 onAnalyzeAmoled    = viewModel::analyzeAmoled,

@@ -24,9 +24,11 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.github.reygnn.chiaroscuro.R
 import com.github.reygnn.chiaroscuro.ui.components.AppIcons
 import com.github.reygnn.chiaroscuro.ui.components.IntSliderRow
 import com.github.reygnn.chiaroscuro.ui.components.IntTextFieldRow
@@ -44,10 +46,10 @@ fun PreferencesScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Preferences") },
+                title = { Text(stringResource(R.string.screen_preferences_title)) },
                 navigationIcon = {
                     IconButton(onClick = onBack) {
-                        Icon(AppIcons.ArrowBack, contentDescription = "Back")
+                        Icon(AppIcons.ArrowBack, contentDescription = stringResource(R.string.cd_back))
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(
@@ -65,15 +67,15 @@ fun PreferencesScreen(
                 .padding(horizontal = 20.dp, vertical = 16.dp),
             verticalArrangement = Arrangement.spacedBy(16.dp),
         ) {
-            SectionTitle("FAB Quick Action")
-            CheckRow("Apply AMOLED correction", prefs.fabApplyAmoled, vm::setFabApplyAmoled)
-            CheckRow("Place black rectangle", prefs.fabPlaceRect, vm::setFabPlaceRect)
+            SectionTitle(stringResource(R.string.pref_section_fab))
+            CheckRow(stringResource(R.string.pref_fab_apply_amoled), prefs.fabApplyAmoled, vm::setFabApplyAmoled)
+            CheckRow(stringResource(R.string.pref_fab_place_rect), prefs.fabPlaceRect, vm::setFabPlaceRect)
 
             HorizontalDivider()
 
-            SectionTitle("AMOLED Filter")
+            SectionTitle(stringResource(R.string.pref_section_amoled))
             IntSliderRow(
-                label = "Threshold",
+                label = stringResource(R.string.pref_amoled_threshold),
                 value = prefs.amoledThreshold,
                 valueRange = 0..50,
                 onValueChange = vm::setAmoledThreshold,
@@ -81,31 +83,36 @@ fun PreferencesScreen(
                 labelWidth = 80.dp,
                 valueWidth = 32.dp,
             )
-            CheckRow("Warm Tint Mode (R-B > 3 only)", prefs.amoledWarmMode, vm::setAmoledWarmMode)
+            CheckRow(stringResource(R.string.pref_amoled_warm_mode), prefs.amoledWarmMode, vm::setAmoledWarmMode)
 
             HorizontalDivider()
 
-            SectionTitle("Black Rectangle")
-            IntTextFieldRow("X", prefs.rectX.toInt(), { vm.setRectX(it.toFloat()) }, suffix = "px")
-            IntTextFieldRow("Y", prefs.rectY.toInt(), { vm.setRectY(it.toFloat()) }, suffix = "px")
-            IntTextFieldRow("Width", prefs.rectWidth, vm::setRectWidth, suffix = "px")
-            IntTextFieldRow("Height", prefs.rectHeight, vm::setRectHeight, suffix = "px")
+            val pxSuffix = stringResource(R.string.pref_rect_suffix_px)
+            SectionTitle(stringResource(R.string.pref_section_rect))
+            IntTextFieldRow(stringResource(R.string.pref_rect_x), prefs.rectX.toInt(), { vm.setRectX(it.toFloat()) }, suffix = pxSuffix)
+            IntTextFieldRow(stringResource(R.string.pref_rect_y), prefs.rectY.toInt(), { vm.setRectY(it.toFloat()) }, suffix = pxSuffix)
+            IntTextFieldRow(stringResource(R.string.pref_rect_width), prefs.rectWidth, vm::setRectWidth, suffix = pxSuffix)
+            IntTextFieldRow(stringResource(R.string.pref_rect_height), prefs.rectHeight, vm::setRectHeight, suffix = pxSuffix)
 
             HorizontalDivider()
 
-            SectionTitle("File Naming")
+            SectionTitle(stringResource(R.string.pref_section_naming))
             Text(
-                text = "Next file: ${prefs.filenamePrefix}_${prefs.sleeveCounter.toString().padStart(3, '0')}.png",
+                text = stringResource(
+                    R.string.pref_next_file,
+                    prefs.filenamePrefix,
+                    prefs.sleeveCounter.toString().padStart(3, '0'),
+                ),
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
-            StringTextFieldRow("Prefix", prefs.filenamePrefix, vm::setFilenamePrefix)
-            IntTextFieldRow("Counter", prefs.sleeveCounter, vm::setCounter)
+            StringTextFieldRow(stringResource(R.string.pref_prefix), prefs.filenamePrefix, vm::setFilenamePrefix)
+            IntTextFieldRow(stringResource(R.string.pref_counter), prefs.sleeveCounter, vm::setCounter)
             OutlinedButton(
                 onClick = { vm.resetCounter() },
                 modifier = Modifier.fillMaxWidth(),
             ) {
-                Text("Reset counter to 001")
+                Text(stringResource(R.string.pref_reset_counter))
             }
         }
     }

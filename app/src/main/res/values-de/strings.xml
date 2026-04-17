@@ -1,0 +1,78 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- App -->
+    <!-- Produktname bewusst nicht übersetzt (Marke) -->
+    <string name="app_name">Chiaroscuro</string>
+
+    <!-- Top-Level-Screens -->
+    <string name="screen_preferences_title">Einstellungen</string>
+
+    <!-- Accessibility / Content-Descriptions -->
+    <string name="cd_menu">Menü</string>
+    <string name="cd_back">Zurück</string>
+    <string name="cd_quick_action">Schnellaktion</string>
+
+    <!-- Editor — Empty-State -->
+    <string name="editor_empty_state">Kein Bild geladen\nAuf 📂 Laden tippen, um zu starten</string>
+
+    <!-- Editor — Menü -->
+    <string name="menu_preferences">Einstellungen</string>
+
+    <!-- Bottom-Controls — Rechteck -->
+    <string name="bc_rectangle">Rechteck</string>
+    <string name="bc_rect_active">Aktiv</string>
+    <string name="bc_rect_inactive">Inaktiv</string>
+    <string name="bc_rect_width">Breite</string>
+    <string name="bc_rect_height">Höhe</string>
+    <string name="bc_rect_hint">Bild zoomen und schieben, bis das Wasserzeichen unter dem Rechteck liegt</string>
+
+    <!-- Bottom-Controls — AMOLED -->
+    <string name="bc_amoled">AMOLED</string>
+    <string name="bc_amoled_threshold">Schwellenwert</string>
+    <string name="bc_amoled_warm_tint">🌡 Warmton</string>
+    <string name="bc_amoled_warm_hint">Nur warme Dunkeltöne (R-B&gt;3) — Schatten bleiben erhalten</string>
+    <string name="bc_amoled_default_hint">Empfohlen: 5–15 für erhaltene Schatten, 30–50 für aggressive Korrektur</string>
+    <string name="bc_amoled_near_black_stats">🔴 %1$d Pixel (%2$s%%) fast-schwarz</string>
+    <string name="bc_amoled_analyze">🔍 Analysieren</string>
+    <string name="bc_amoled_cancel">✕ Abbrechen</string>
+    <string name="bc_amoled_apply">✅ Anwenden</string>
+
+    <!-- Bottom-Controls — Laden/Speichern -->
+    <string name="bc_load">📂 Laden</string>
+    <string name="bc_save">💾 Speichern</string>
+
+    <!-- Einstellungen — Abschnitte -->
+    <string name="pref_section_fab">FAB-Schnellaktion</string>
+    <string name="pref_section_amoled">AMOLED-Filter</string>
+    <string name="pref_section_rect">Schwarzes Rechteck</string>
+    <string name="pref_section_naming">Dateibenennung</string>
+
+    <!-- Einstellungen — FAB -->
+    <string name="pref_fab_apply_amoled">AMOLED-Korrektur anwenden</string>
+    <string name="pref_fab_place_rect">Schwarzes Rechteck platzieren</string>
+
+    <!-- Einstellungen — AMOLED -->
+    <string name="pref_amoled_threshold">Schwellenwert</string>
+    <string name="pref_amoled_warm_mode">Warmton-Modus (nur R-B &gt; 3)</string>
+
+    <!-- Einstellungen — Rechteck -->
+    <string name="pref_rect_x">X</string>
+    <string name="pref_rect_y">Y</string>
+    <string name="pref_rect_width">Breite</string>
+    <string name="pref_rect_height">Höhe</string>
+    <string name="pref_rect_suffix_px">px</string>
+
+    <!-- Einstellungen — Benennung -->
+    <string name="pref_next_file">Nächste Datei: %1$s_%2$s.png</string>
+    <string name="pref_prefix">Präfix</string>
+    <string name="pref_counter">Zähler</string>
+    <string name="pref_reset_counter">Zähler auf 001 zurücksetzen</string>
+
+    <!-- Editor-Export-Meldungen (User-Toasts) -->
+    <string name="msg_saved">✅ Gespeichert!</string>
+    <string name="msg_amoled_applied">✅ AMOLED-Korrektur angewendet</string>
+    <string name="msg_error">❌ Fehler: %1$s</string>
+
+    <!-- Export — Standard-Dateiname als Fallback -->
+    <string name="export_default_filename">bild.png</string>
+</resources>

@@ -21,7 +21,9 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
+import com.github.reygnn.chiaroscuro.R
 import com.github.reygnn.chiaroscuro.model.EditorState
 import java.util.Locale
 
@@ -52,39 +54,44 @@ fun BottomControls(
                 .verticalScroll(rememberScrollState()),
             verticalArrangement = Arrangement.spacedBy(8.dp),
         ) {
-            // ── Rectangle ────────────────────────────────────────
             Row(
                 verticalAlignment = Alignment.CenterVertically,
                 modifier = Modifier.fillMaxWidth(),
             ) {
                 Text(
-                    text = "Rectangle",
+                    text = stringResource(R.string.bc_rectangle),
                     style = MaterialTheme.typography.labelMedium,
                     modifier = Modifier.weight(1f),
                 )
                 FilterChip(
                     selected = state.rectVisible,
                     onClick = onToggleRect,
-                    label = { Text(if (state.rectVisible) "Active" else "Inactive") },
+                    label = {
+                        Text(
+                            if (state.rectVisible) stringResource(R.string.bc_rect_active)
+                            else stringResource(R.string.bc_rect_inactive),
+                        )
+                    },
                 )
             }
             if (state.rectVisible) {
+                val pxSuffix = stringResource(R.string.pref_rect_suffix_px)
                 IntSliderRow(
-                    label = "Width",
+                    label = stringResource(R.string.bc_rect_width),
                     value = state.rectWidth,
                     valueRange = 10..2000,
                     onValueChange = onRectWidthChange,
-                    valueSuffix = "px",
+                    valueSuffix = pxSuffix,
                 )
                 IntSliderRow(
-                    label = "Height",
+                    label = stringResource(R.string.bc_rect_height),
                     value = state.rectHeight,
                     valueRange = 10..2000,
                     onValueChange = onRectHeightChange,
-                    valueSuffix = "px",
+                    valueSuffix = pxSuffix,
                 )
                 Text(
-                    text = "Pinch & pan image until watermark is under the rectangle",
+                    text = stringResource(R.string.bc_rect_hint),
                     style = MaterialTheme.typography.labelSmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
@@ -92,13 +99,12 @@ fun BottomControls(
 
             HorizontalDivider()
 
-            // ── AMOLED ───────────────────────────────────────────
             Text(
-                text = "AMOLED",
+                text = stringResource(R.string.bc_amoled),
                 style = MaterialTheme.typography.labelMedium,
             )
             IntSliderRow(
-                label = "Threshold",
+                label = stringResource(R.string.bc_amoled_threshold),
                 value = state.amoledThreshold,
                 valueRange = 0..50,
                 onValueChange = onAmoledThreshold,
@@ -108,7 +114,7 @@ fun BottomControls(
                 modifier = Modifier.fillMaxWidth(),
             ) {
                 Text(
-                    text = "🌡 Warm Tint",
+                    text = stringResource(R.string.bc_amoled_warm_tint),
                     style = MaterialTheme.typography.labelMedium,
                     modifier = Modifier.weight(1f),
                 )
@@ -119,16 +125,19 @@ fun BottomControls(
             }
             Text(
                 text = if (state.amoledWarmMode)
-                    "Warm dark tones only (R-B>3) — shadows preserved"
+                    stringResource(R.string.bc_amoled_warm_hint)
                 else
-                    "Recommended: 5–15 to preserve shadows, 30–50 aggressive",
+                    stringResource(R.string.bc_amoled_default_hint),
                 style = MaterialTheme.typography.labelSmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
             if (state.amoledPixelCount > 0) {
                 Text(
-                    text = "🔴 ${state.amoledPixelCount} pixels " +
-                            "(${String.format(Locale.US, "%.1f", state.amoledPercent)}%) near-black",
+                    text = stringResource(
+                        R.string.bc_amoled_near_black_stats,
+                        state.amoledPixelCount,
+                        String.format(Locale.US, "%.1f", state.amoledPercent),
+                    ),
                     style = MaterialTheme.typography.labelSmall,
                     color = MaterialTheme.colorScheme.error,
                 )
@@ -149,24 +158,23 @@ fun BottomControls(
                                 strokeWidth = 2.dp,
                             )
                         } else {
-                            Text("🔍 Analyze")
+                            Text(stringResource(R.string.bc_amoled_analyze))
                         }
                     }
                 } else {
                     OutlinedButton(
                         onClick = onClearAmoled,
                         modifier = Modifier.weight(1f),
-                    ) { Text("✕ Cancel") }
+                    ) { Text(stringResource(R.string.bc_amoled_cancel)) }
                     Button(
                         onClick = onApplyAmoled,
                         modifier = Modifier.weight(1f),
-                    ) { Text("✅ Apply") }
+                    ) { Text(stringResource(R.string.bc_amoled_apply)) }
                 }
             }
 
             HorizontalDivider()
 
-            // ── Load / Save ──────────────────────────────────────
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.spacedBy(12.dp),
@@ -174,12 +182,12 @@ fun BottomControls(
                 OutlinedButton(
                     onClick = onLoadImage,
                     modifier = Modifier.weight(1f),
-                ) { Text("📂 Load") }
+                ) { Text(stringResource(R.string.bc_load)) }
                 Button(
                     onClick = onSaveTransparent,
                     enabled = !state.isLoading,
                     modifier = Modifier.weight(1f),
-                ) { Text("💾 Save") }
+                ) { Text(stringResource(R.string.bc_save)) }
             }
         }
     }
