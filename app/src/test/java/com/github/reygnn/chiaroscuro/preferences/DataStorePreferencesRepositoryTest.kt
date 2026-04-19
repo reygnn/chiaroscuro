@@ -228,6 +228,39 @@ class DataStorePreferencesRepositoryTest {
             }
         }
 
+    // ── ExportBackground ─────────────────────────────────────────
+
+    @Test
+    fun `exportBackground defaults to AMOLED when unset`() = runTest(mainRule.testDispatcher) {
+        repository.settings.test {
+            assertEquals(ExportBackground.AMOLED, awaitItem().exportBackground)
+            cancelAndIgnoreRemainingEvents()
+        }
+    }
+
+    @Test
+    fun `setExportBackground persists and emits TRANSPARENT`() =
+        runTest(mainRule.testDispatcher) {
+            repository.setExportBackground(ExportBackground.TRANSPARENT)
+
+            repository.settings.test {
+                assertEquals(ExportBackground.TRANSPARENT, awaitItem().exportBackground)
+                cancelAndIgnoreRemainingEvents()
+            }
+        }
+
+    @Test
+    fun `setExportBackground round-trips AMOLED after TRANSPARENT`() =
+        runTest(mainRule.testDispatcher) {
+            repository.setExportBackground(ExportBackground.TRANSPARENT)
+            repository.setExportBackground(ExportBackground.AMOLED)
+
+            repository.settings.test {
+                assertEquals(ExportBackground.AMOLED, awaitItem().exportBackground)
+                cancelAndIgnoreRemainingEvents()
+            }
+        }
+
     // ── Helpers ──────────────────────────────────────────────────
 
     private suspend fun currentSnapshot(): UserPreferences {

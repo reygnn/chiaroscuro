@@ -1,7 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <!-- App -->
-    <!-- Produktname bewusst nicht übersetzt (Marke) -->
     <string name="app_name">Chiaroscuro</string>
 
     <!-- Top-Level-Screens -->
@@ -46,6 +45,7 @@
     <string name="pref_section_amoled">AMOLED-Filter</string>
     <string name="pref_section_rect">Schwarzes Rechteck</string>
     <string name="pref_section_naming">Dateibenennung</string>
+    <string name="pref_section_export">Export</string>
 
     <!-- Einstellungen — FAB -->
     <string name="pref_fab_apply_amoled">AMOLED-Korrektur anwenden</string>
@@ -67,6 +67,10 @@
     <string name="pref_prefix">Präfix</string>
     <string name="pref_counter">Zähler</string>
     <string name="pref_reset_counter">Zähler auf 001 zurücksetzen</string>
+
+    <!-- Einstellungen — Export -->
+    <string name="pref_export_transparent">Export mit transparentem Hintergrund</string>
+    <string name="pref_export_transparent_hint">Aus: Schwarze Pixel bleiben schwarz (AMOLED-Standard). An: Schwarze Pixel werden transparent (Freistellung).</string>
 
     <!-- Editor-Export-Meldungen (User-Toasts) -->
     <string name="msg_saved">✅ Gespeichert!</string>

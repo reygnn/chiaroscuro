@@ -29,6 +29,7 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.github.reygnn.chiaroscuro.R
+import com.github.reygnn.chiaroscuro.preferences.ExportBackground
 import com.github.reygnn.chiaroscuro.ui.components.AppIcons
 import com.github.reygnn.chiaroscuro.ui.components.IntSliderRow
 import com.github.reygnn.chiaroscuro.ui.components.IntTextFieldRow
@@ -114,6 +115,20 @@ fun PreferencesScreen(
             ) {
                 Text(stringResource(R.string.pref_reset_counter))
             }
+
+            HorizontalDivider()
+
+            SectionTitle(stringResource(R.string.pref_section_export))
+            CheckRow(
+                label = stringResource(R.string.pref_export_transparent),
+                checked = prefs.exportBackground == ExportBackground.TRANSPARENT,
+                onCheckedChange = vm::setExportBackgroundTransparent,
+            )
+            Text(
+                text = stringResource(R.string.pref_export_transparent_hint),
+                style = MaterialTheme.typography.labelSmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
         }
     }
 }

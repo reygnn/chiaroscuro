@@ -1,5 +1,6 @@
 package com.github.reygnn.chiaroscuro.viewmodel
 
+import com.github.reygnn.chiaroscuro.preferences.ExportBackground
 import com.github.reygnn.chiaroscuro.preferences.PreferencesRepository
 import com.github.reygnn.chiaroscuro.preferences.UserPreferences
 import kotlinx.coroutines.flow.Flow
@@ -90,5 +91,9 @@ internal class FakePreferencesRepository(
         _settings.value = _settings.value.copy(
             filenamePrefix = value.ifBlank { UserPreferences.DEFAULT_FILENAME_PREFIX },
         )
+    }
+
+    override suspend fun setExportBackground(value: ExportBackground) {
+        _settings.value = _settings.value.copy(exportBackground = value)
     }
 }

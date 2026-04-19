@@ -31,7 +31,6 @@
     <string name="bc_amoled_warm_tint">🌡 Warm Tint</string>
     <string name="bc_amoled_warm_hint">Warm dark tones only (R-B&gt;3) — shadows preserved</string>
     <string name="bc_amoled_default_hint">Recommended: 5–15 to preserve shadows, 30–50 aggressive</string>
-    <!-- %1$d: pixel count, %2$s: percentage formatted with Locale.US -->
     <string name="bc_amoled_near_black_stats">🔴 %1$d pixels (%2$s%%) near-black</string>
     <string name="bc_amoled_analyze">🔍 Analyze</string>
     <string name="bc_amoled_cancel">✕ Cancel</string>
@@ -46,6 +45,7 @@
     <string name="pref_section_amoled">AMOLED Filter</string>
     <string name="pref_section_rect">Black Rectangle</string>
     <string name="pref_section_naming">File Naming</string>
+    <string name="pref_section_export">Export</string>
 
     <!-- Preferences — FAB -->
     <string name="pref_fab_apply_amoled">Apply AMOLED correction</string>
@@ -63,16 +63,18 @@
     <string name="pref_rect_suffix_px">px</string>
 
     <!-- Preferences — Naming -->
-    <!-- %1$s: filename prefix, %2$s: zero-padded counter -->
     <string name="pref_next_file">Next file: %1$s_%2$s.png</string>
     <string name="pref_prefix">Prefix</string>
     <string name="pref_counter">Counter</string>
     <string name="pref_reset_counter">Reset counter to 001</string>
 
+    <!-- Preferences — Export -->
+    <string name="pref_export_transparent">Export with transparent background</string>
+    <string name="pref_export_transparent_hint">Off: black pixels stay black (AMOLED default). On: black pixels become transparent (cutout).</string>
+
     <!-- Editor export messages (user-facing toasts) -->
     <string name="msg_saved">✅ Saved!</string>
     <string name="msg_amoled_applied">✅ AMOLED correction applied</string>
-    <!-- %1$s: error message -->
     <string name="msg_error">❌ Error: %1$s</string>
 
     <!-- Export — default filename when no proposed filename is available -->

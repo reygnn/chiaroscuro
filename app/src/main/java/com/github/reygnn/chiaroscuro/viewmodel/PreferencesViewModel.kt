@@ -7,6 +7,7 @@ import androidx.lifecycle.viewModelScope
 import androidx.lifecycle.viewmodel.initializer
 import androidx.lifecycle.viewmodel.viewModelFactory
 import com.github.reygnn.chiaroscuro.ChiaroscuroApplication
+import com.github.reygnn.chiaroscuro.preferences.ExportBackground
 import com.github.reygnn.chiaroscuro.preferences.PreferencesRepository
 import com.github.reygnn.chiaroscuro.preferences.UserPreferences
 import kotlinx.coroutines.flow.SharingStarted
@@ -56,6 +57,13 @@ class PreferencesViewModel(
 
     fun setFilenamePrefix(value: String) =
         viewModelScope.launch { repository.setFilenamePrefix(value) }
+
+    fun setExportBackgroundTransparent(enabled: Boolean) =
+        viewModelScope.launch {
+            repository.setExportBackground(
+                if (enabled) ExportBackground.TRANSPARENT else ExportBackground.AMOLED,
+            )
+        }
 
     companion object {
         private const val SUBSCRIPTION_TIMEOUT_MS = 5_000L

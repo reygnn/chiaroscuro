@@ -17,6 +17,7 @@ import com.github.reygnn.chiaroscuro.imaging.ImageGeometry
 import com.github.reygnn.chiaroscuro.imaging.ImageProcessing
 import com.github.reygnn.chiaroscuro.model.EditorState
 import com.github.reygnn.chiaroscuro.model.ExportMessage
+import com.github.reygnn.chiaroscuro.preferences.ExportBackground
 import com.github.reygnn.chiaroscuro.preferences.PreferencesRepository
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -206,9 +207,10 @@ class EditorViewModel(
         val src = _sourceBitmap.value ?: return
         val s = _state.value
         viewModelScope.launch {
+            val background = repository.settings.first().exportBackground
             val message: ExportMessage = withContext(Dispatchers.IO) {
                 runCatching {
-                    writeTransparentPng(context, uri, src, s)
+                    writeExport(context, uri, src, s, background)
                     repository.incrementCounter()
                     ExportMessage.Saved as ExportMessage
                 }.getOrElse { e ->
@@ -228,11 +230,26 @@ class EditorViewModel(
         _state.update { it.copy(exportMessage = null) }
     }
 
-    private fun writeTransparentPng(
+    /**
+     * Renders the final PNG.
+     *
+     * Depending on [background]:
+     *   - [ExportBackground.AMOLED] leaves pure-black pixels black (the
+     *     AMOLED display will drive those pixels fully off at render
+     *     time). Output is fully opaque.
+     *   - [ExportBackground.TRANSPARENT] replaces pure-black pixels
+     *     with alpha=0. Output uses the PNG alpha channel.
+     *
+     * In both modes, any black rectangle drawn by [ImageProcessing.drawBlackRect]
+     * is applied first, so the mode switch decides how that rectangle's
+     * pixels are treated in the final image.
+     */
+    private fun writeExport(
         context: Context,
         uri: Uri,
         src: Bitmap,
         s: EditorState,
+        background: ExportBackground,
     ) {
         val working = src.copy(Bitmap.Config.ARGB_8888, true)
         if (s.rectVisible && s.canvasSize != Size.Zero) {
@@ -249,7 +266,10 @@ class EditorViewModel(
             )
             ImageProcessing.drawBlackRect(working, origin.x, origin.y, s.rectWidth, s.rectHeight)
         }
-        val result = ImageProcessing.blackToTransparent(working)
+        val result = when (background) {
+            ExportBackground.AMOLED -> working
+            ExportBackground.TRANSPARENT -> ImageProcessing.blackToTransparent(working)
+        }
         context.contentResolver.openOutputStream(uri)?.use { out ->
             result.compress(Bitmap.CompressFormat.PNG, 100, out)
         } ?: error("Cannot open output stream for $uri")

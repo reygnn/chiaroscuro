@@ -31,4 +31,6 @@ interface PreferencesRepository {
     suspend fun resetCounter()
 
     suspend fun setFilenamePrefix(value: String)
+
+    suspend fun setExportBackground(value: ExportBackground)
 }

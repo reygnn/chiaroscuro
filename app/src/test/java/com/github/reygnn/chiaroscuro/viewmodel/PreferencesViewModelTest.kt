@@ -1,6 +1,7 @@
 package com.github.reygnn.chiaroscuro.viewmodel
 
 import app.cash.turbine.test
+import com.github.reygnn.chiaroscuro.preferences.ExportBackground
 import com.github.reygnn.chiaroscuro.preferences.UserPreferences
 import com.github.reygnn.chiaroscuro.testing.MainDispatcherRule
 import kotlinx.coroutines.test.advanceUntilIdle
@@ -137,5 +138,20 @@ class PreferencesViewModelTest {
                 UserPreferences.AMOLED_THRESHOLD_MAX,
                 repository.current.amoledThreshold,
             )
+        }
+
+    @Test
+    fun `setExportBackgroundTransparent forwards to repository`() =
+        runTest(mainRule.testDispatcher) {
+            val repository = FakePreferencesRepository()
+            val vm = PreferencesViewModel(repository)
+
+            vm.setExportBackgroundTransparent(true)
+            advanceUntilIdle()
+            assertEquals(ExportBackground.TRANSPARENT, repository.current.exportBackground)
+
+            vm.setExportBackgroundTransparent(false)
+            advanceUntilIdle()
+            assertEquals(ExportBackground.AMOLED, repository.current.exportBackground)
         }
 }

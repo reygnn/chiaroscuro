@@ -8,16 +8,17 @@ package com.github.reygnn.chiaroscuro.preferences
  * and UI can reference the same source of truth.
  */
 data class UserPreferences(
-    val amoledThreshold: Int    = DEFAULT_AMOLED_THRESHOLD,
-    val amoledWarmMode: Boolean = DEFAULT_AMOLED_WARM_MODE,
-    val fabApplyAmoled: Boolean = DEFAULT_FAB_APPLY_AMOLED,
-    val fabPlaceRect: Boolean   = DEFAULT_FAB_PLACE_RECT,
-    val rectX: Float            = DEFAULT_RECT_X,
-    val rectY: Float            = DEFAULT_RECT_Y,
-    val rectWidth: Int          = DEFAULT_RECT_WIDTH,
-    val rectHeight: Int         = DEFAULT_RECT_HEIGHT,
-    val sleeveCounter: Int      = DEFAULT_SLEEVE_COUNTER,
-    val filenamePrefix: String  = DEFAULT_FILENAME_PREFIX,
+    val amoledThreshold: Int         = DEFAULT_AMOLED_THRESHOLD,
+    val amoledWarmMode: Boolean      = DEFAULT_AMOLED_WARM_MODE,
+    val fabApplyAmoled: Boolean      = DEFAULT_FAB_APPLY_AMOLED,
+    val fabPlaceRect: Boolean        = DEFAULT_FAB_PLACE_RECT,
+    val rectX: Float                 = DEFAULT_RECT_X,
+    val rectY: Float                 = DEFAULT_RECT_Y,
+    val rectWidth: Int               = DEFAULT_RECT_WIDTH,
+    val rectHeight: Int              = DEFAULT_RECT_HEIGHT,
+    val sleeveCounter: Int           = DEFAULT_SLEEVE_COUNTER,
+    val filenamePrefix: String       = DEFAULT_FILENAME_PREFIX,
+    val exportBackground: ExportBackground = DEFAULT_EXPORT_BACKGROUND,
 ) {
     companion object {
         const val DEFAULT_AMOLED_THRESHOLD = 50
@@ -30,10 +31,26 @@ data class UserPreferences(
         const val DEFAULT_RECT_HEIGHT      = 57
         const val DEFAULT_SLEEVE_COUNTER   = 1
         const val DEFAULT_FILENAME_PREFIX  = "sleeve"
+        val DEFAULT_EXPORT_BACKGROUND      = ExportBackground.AMOLED
 
         const val AMOLED_THRESHOLD_MIN = 0
         const val AMOLED_THRESHOLD_MAX = 50
         const val RECT_SIZE_MIN        = 1
         const val SLEEVE_COUNTER_MIN   = 1
     }
+}
+
+/**
+ * Controls how the export pipeline treats pure-black pixels.
+ *
+ * - [AMOLED] keeps them black. On AMOLED displays these render as
+ *   fully off pixels already — no alpha channel work required.
+ *   PNG output, fully opaque.
+ * - [TRANSPARENT] replaces them with alpha=0. The image becomes
+ *   a cutout that shows whatever is behind it (wallpaper, another
+ *   layer, …). PNG output with alpha channel.
+ */
+enum class ExportBackground {
+    AMOLED,
+    TRANSPARENT,
 }
