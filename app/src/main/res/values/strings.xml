@@ -7,38 +7,42 @@
     <string name="screen_preferences_title">Preferences</string>
 
     <!-- Accessibility / content descriptions -->
-    <string name="cd_menu">Menu</string>
     <string name="cd_back">Back</string>
+    <string name="cd_editor_fab">Toggle editor menu</string>
+    <string name="cd_open_commands">Open commands panel</string>
+    <string name="cd_close_panel">Close commands panel</string>
     <string name="cd_quick_action">Quick Action</string>
+    <string name="cd_rect_toggle">Toggle black rectangle</string>
+    <string name="cd_analyze">Analyze AMOLED</string>
+    <string name="cd_apply_amoled">Apply AMOLED correction</string>
+    <string name="cd_cancel_amoled">Cancel AMOLED analysis</string>
+    <string name="cd_save">Save image</string>
 
     <!-- Editor — empty state -->
-    <string name="editor_empty_state">No image loaded\nTap 📂 Load to get started</string>
+    <string name="editor_empty_state">No image loaded\nTap 🛠 → ☰ → 📂 Load to get started</string>
 
-    <!-- Editor — menu -->
+    <!-- Editor — preferences entry label -->
     <string name="menu_preferences">Preferences</string>
 
-    <!-- Bottom controls — Rectangle section -->
+    <!-- Commands panel — header -->
+    <string name="cp_title">Commands</string>
+
+    <!-- Commands panel — Rectangle section -->
     <string name="bc_rectangle">Rectangle</string>
-    <string name="bc_rect_active">Active</string>
-    <string name="bc_rect_inactive">Inactive</string>
     <string name="bc_rect_width">Width</string>
     <string name="bc_rect_height">Height</string>
     <string name="bc_rect_hint">Pinch &amp; pan image until watermark is under the rectangle</string>
 
-    <!-- Bottom controls — AMOLED section -->
+    <!-- Commands panel — AMOLED section -->
     <string name="bc_amoled">AMOLED</string>
     <string name="bc_amoled_threshold">Threshold</string>
     <string name="bc_amoled_warm_tint">🌡 Warm Tint</string>
     <string name="bc_amoled_warm_hint">Warm dark tones only (R-B&gt;3) — shadows preserved</string>
     <string name="bc_amoled_default_hint">Recommended: 5–15 to preserve shadows, 30–50 aggressive</string>
     <string name="bc_amoled_near_black_stats">🔴 %1$d pixels (%2$s%%) near-black</string>
-    <string name="bc_amoled_analyze">🔍 Analyze</string>
-    <string name="bc_amoled_cancel">✕ Cancel</string>
-    <string name="bc_amoled_apply">✅ Apply</string>
 
-    <!-- Bottom controls — Load/Save -->
+    <!-- Commands panel — Load button label -->
     <string name="bc_load">📂 Load</string>
-    <string name="bc_save">💾 Save</string>
 
     <!-- Preferences — sections -->
     <string name="pref_section_fab">FAB Quick Action</string>

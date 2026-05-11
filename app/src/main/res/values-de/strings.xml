@@ -7,38 +7,42 @@
     <string name="screen_preferences_title">Einstellungen</string>
 
     <!-- Accessibility / Content-Descriptions -->
-    <string name="cd_menu">Menü</string>
     <string name="cd_back">Zurück</string>
+    <string name="cd_editor_fab">Editor-Menü umschalten</string>
+    <string name="cd_open_commands">Befehlsleiste öffnen</string>
+    <string name="cd_close_panel">Befehlsleiste schließen</string>
     <string name="cd_quick_action">Schnellaktion</string>
+    <string name="cd_rect_toggle">Schwarzes Rechteck umschalten</string>
+    <string name="cd_analyze">AMOLED analysieren</string>
+    <string name="cd_apply_amoled">AMOLED-Korrektur anwenden</string>
+    <string name="cd_cancel_amoled">AMOLED-Analyse abbrechen</string>
+    <string name="cd_save">Bild speichern</string>
 
     <!-- Editor — Empty-State -->
-    <string name="editor_empty_state">Kein Bild geladen\nAuf 📂 Laden tippen, um zu starten</string>
+    <string name="editor_empty_state">Kein Bild geladen\nAuf 🛠 → ☰ → 📂 Laden tippen, um zu starten</string>
 
-    <!-- Editor — Menü -->
+    <!-- Editor — Einstellungen-Eintrag -->
     <string name="menu_preferences">Einstellungen</string>
 
-    <!-- Bottom-Controls — Rechteck -->
+    <!-- Commands-Panel — Titel -->
+    <string name="cp_title">Befehle</string>
+
+    <!-- Commands-Panel — Rechteck -->
     <string name="bc_rectangle">Rechteck</string>
-    <string name="bc_rect_active">Aktiv</string>
-    <string name="bc_rect_inactive">Inaktiv</string>
     <string name="bc_rect_width">Breite</string>
     <string name="bc_rect_height">Höhe</string>
     <string name="bc_rect_hint">Bild zoomen und schieben, bis das Wasserzeichen unter dem Rechteck liegt</string>
 
-    <!-- Bottom-Controls — AMOLED -->
+    <!-- Commands-Panel — AMOLED -->
     <string name="bc_amoled">AMOLED</string>
     <string name="bc_amoled_threshold">Schwellenwert</string>
     <string name="bc_amoled_warm_tint">🌡 Warmton</string>
     <string name="bc_amoled_warm_hint">Nur warme Dunkeltöne (R-B&gt;3) — Schatten bleiben erhalten</string>
     <string name="bc_amoled_default_hint">Empfohlen: 5–15 für erhaltene Schatten, 30–50 für aggressive Korrektur</string>
     <string name="bc_amoled_near_black_stats">🔴 %1$d Pixel (%2$s%%) fast-schwarz</string>
-    <string name="bc_amoled_analyze">🔍 Analysieren</string>
-    <string name="bc_amoled_cancel">✕ Abbrechen</string>
-    <string name="bc_amoled_apply">✅ Anwenden</string>
 
-    <!-- Bottom-Controls — Laden/Speichern -->
+    <!-- Commands-Panel — Laden-Button -->
     <string name="bc_load">📂 Laden</string>
-    <string name="bc_save">💾 Speichern</string>
 
     <!-- Einstellungen — Abschnitte -->
     <string name="pref_section_fab">FAB-Schnellaktion</string>
