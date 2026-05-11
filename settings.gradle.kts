@@ -21,5 +21,5 @@ dependencyResolutionManagement {
 
 }
 
-rootProject.name = "ImageEditor"
+rootProject.name = "chiaroscuro"
 include(":app")
