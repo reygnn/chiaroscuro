@@ -342,9 +342,9 @@ Number formatting in the AMOLED pixel-percentage display uses `Locale.US` delibe
 
 ## Testing
 
-JVM unit tests cover all logic layers. Instrumented tests and Robolectric are deliberately not used — the test loop stays fast and CI-friendly.
-
+JVM unit tests cover all logic layers. Instrumented tests are deliberately not used. Robolectric is used in exactly one test to pin a framework-behavior regression that cannot be reproduced on the pure JVM — see AMOLED.md and TESTING_CONVENTIONS.kt section 7 for rationale.
 ```
+Layer                                  Tests   Location
 Layer                                  Tests   Location
 ───────────────────────────────────────────────────────────────────────────────
 Repository contract (clamping,           19    DataStorePreferencesRepositoryTest
@@ -359,7 +359,10 @@ AMOLED pixel kernel (threshold           22    AmoledTransformTest
   immutability, count correctness)
 Coordinate geometry (baseScale,           5    ImageGeometryTest
   pan/zoom invariants)
+Bitmap hasAlpha regression guard          2    ImageProcessingRobolectricTest
+  (requires Robolectric 4.16 + JDK 21)
 ───────────────────────────────────────────────────────────────────────────────
+Total                                    70
 ```
 
 Not covered: `ImageProcessing` (thin Bitmap adapter — see the file's top-of-class comment for the policy); real DataStore persistence across process restart; Compose UI rendering.
@@ -390,6 +393,9 @@ Sub-second on any developer machine.
 - Android Studio Meerkat or later
 - JDK 17
 - Android 16 (API 36) device or emulator
+- JDK 21 for running unit tests (required by Robolectric 4.16+ when
+  targeting Android SDK 36). Bytecode target for the app itself
+  stays at JVM 17. Android Studio Meerkat+ bundles JDK 21.
 
 ### R8 / ProGuard
 

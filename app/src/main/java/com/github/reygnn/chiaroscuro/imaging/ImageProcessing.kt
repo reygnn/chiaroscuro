@@ -56,11 +56,25 @@ internal object ImageProcessing {
         )
     }
 
-    /** Returns a new bitmap with pure-black pixels replaced by fully transparent. Source not mutated. */
+    /**
+     * Returns a new bitmap with pure-black pixels replaced by fully transparent.
+     * Source not mutated.
+     *
+     * IMPORTANT: We force [Bitmap.setHasAlpha]`(true)` on the result. Without
+     * this, a source bitmap decoded from an opaque container (e.g. a JPEG, or
+     * a PNG without alpha channel) would propagate `hasAlpha = false` through
+     * [Bitmap.copy], and [Bitmap.compress] would then strip the alpha channel
+     * when writing the PNG — producing an opaque image despite our pixel
+     * array containing 0x00000000 values. Setting the flag explicitly is the
+     * only reliable way to tell Android's PNG encoder to keep the alpha
+     * channel intact.
+     */
     fun blackToTransparent(source: Bitmap): Bitmap {
         val pixels = source.toArgbArray()
         val transformed = AmoledTransform.blackToTransparent(pixels)
-        return source.copiedWith(transformed)
+        val result = source.copiedWith(transformed)
+        result.setHasAlpha(true)
+        return result
     }
 
     /**

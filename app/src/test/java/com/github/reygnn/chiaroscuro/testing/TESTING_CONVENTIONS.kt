@@ -84,15 +84,16 @@ package com.github.reygnn.chiaroscuro.testing
  * 5. Android framework classes
  * ────────────────────────────────────────────────────────────────────
  *
- * Unit tests run on the JVM with unitTests.isReturnDefaultValues = true.
- * Calls into android.graphics.Bitmap, Canvas, Color, etc. return
- * default values and will make image-processing tests meaningless.
+ * JVM unit tests run with unitTests.isReturnDefaultValues = true. Calls
+ * into android.graphics.Bitmap, Canvas, Color, etc. return default
+ * values (null, 0, false) — image-processing assertions based on those
+ * return values are meaningless.
  *
- * Pixel-level tests therefore do NOT go here — they belong in
- * androidTest/ (instrumented). Unit tests on this layer cover the
- * ViewModel's orchestration (did it call the repository? did it
- * flip isAnalyzing? did it update state in the right order?), not
- * the bitmap pixel values themselves.
+ * Pixel-level logic therefore lives in pure Kotlin kernels
+ * (AmoledTransform, ImageGeometry) that are trivially JVM-testable
+ * without any Android imports. The thin ImageProcessing adapter does
+ * the Bitmap↔IntArray conversion and is NOT directly unit-tested —
+ * see its top-of-class comment for the testing policy.
  *
  * ────────────────────────────────────────────────────────────────────
  * 6. JUnit assertions, not kotlin.test
@@ -101,5 +102,33 @@ package com.github.reygnn.chiaroscuro.testing
  * Use org.junit.Assert.* for assertions. kotlin.test.* is the KMP
  * assertion API and requires the kotlin-test dependency, which this
  * project does not ship.
+ *
+ * ────────────────────────────────────────────────────────────────────
+ * 7. Robolectric — targeted exception, not the default
+ * ────────────────────────────────────────────────────────────────────
+ *
+ * This project does NOT use Robolectric for general testing. Pure JVM
+ * tests are faster and cover all of our logic. Robolectric is added
+ * only to exercise framework behavior that cannot be reproduced on
+ * the JVM — where the default-values stub gives a misleading green.
+ *
+ * Currently, ONE such test exists: ImageProcessingRobolectricTest.
+ * It guards a Bitmap.hasAlpha + compress(PNG) interaction that caused
+ * a real transparency regression. The test pins the behavior so the
+ * same bug cannot return silently.
+ *
+ * If you find yourself reaching for Robolectric, first ask:
+ *
+ *   1. Can the logic be extracted into a pure-Kotlin kernel?
+ *      (Almost always yes — see AmoledTransform / ImageGeometry.)
+ *   2. Is this testing *framework behavior*, not our own code?
+ *      (Only then is Robolectric justified.)
+ *   3. Is the risk of silent regression high enough to pay the cost
+ *      of a Robolectric sandbox (~30 s cold start, ~1 s warm)?
+ *
+ * Robolectric tests use @RunWith(AndroidJUnit4::class) + @Config(sdk = …)
+ * and live in src/test/. Current toolchain pins Robolectric 4.15.1 /
+ * SDK 35 so tests run on JDK 17. Upgrading to Robolectric 4.16+ for
+ * SDK 36 parity would require JDK 21 as the test runtime.
  */
 private object TestingConventions
