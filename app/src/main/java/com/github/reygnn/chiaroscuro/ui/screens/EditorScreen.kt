@@ -125,6 +125,7 @@ fun EditorScreen(
                     else viewModel.analyzeAmoled()
                 },
                 onSave            = { saveLauncher.launch(defaultExportFilename) },
+                onLoadImage       = { openLauncher.launch(arrayOf("image/*")) },
                 onOpenCommandsOrCancel = {
                     if (state.showAmoledOverlay) viewModel.clearAmoledAnalysis()
                     else commandsOpen = true

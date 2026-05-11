@@ -17,9 +17,10 @@
     <string name="cd_apply_amoled">AMOLED-Korrektur anwenden</string>
     <string name="cd_cancel_amoled">AMOLED-Analyse abbrechen</string>
     <string name="cd_save">Bild speichern</string>
+    <string name="cd_load">Bild laden</string>
 
     <!-- Editor — Empty-State -->
-    <string name="editor_empty_state">Kein Bild geladen\nAuf 🛠 → ☰ → 📂 Laden tippen, um zu starten</string>
+    <string name="editor_empty_state">Kein Bild geladen\nAuf 🛠 → 📂 Laden tippen, um zu starten</string>
 
     <!-- Editor — Einstellungen-Eintrag -->
     <string name="menu_preferences">Einstellungen</string>
