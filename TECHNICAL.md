@@ -390,12 +390,12 @@ Sub-second on any developer machine.
 ## Build & Setup
 
 ### Requirements
-- Android Studio Meerkat or later
-- JDK 17
+- Android Studio Meerkat or later (bundles JDK 21)
+- JDK 21 — Robolectric 4.16+ targeting Android SDK 36 requires it for
+  unit tests, and the app's bytecode also targets JVM 21 to match.
+  Gradle's `foojay-resolver-convention` plugin (settings.gradle.kts)
+  auto-provisions JDK 21 if it's not already installed.
 - Android 16 (API 36) device or emulator
-- JDK 21 for running unit tests (required by Robolectric 4.16+ when
-  targeting Android SDK 36). Bytecode target for the app itself
-  stays at JVM 17. Android Studio Meerkat+ bundles JDK 21.
 
 ### R8 / ProGuard
 
