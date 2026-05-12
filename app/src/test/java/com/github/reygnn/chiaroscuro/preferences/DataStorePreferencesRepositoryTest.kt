@@ -10,6 +10,7 @@ import com.github.reygnn.chiaroscuro.testing.MainDispatcherRule
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
+import org.junit.Before
 import org.junit.Rule
 import org.junit.Test
 
@@ -28,14 +29,45 @@ import org.junit.Test
  *   - Clamping is verified via out-of-range inputs.
  *   - Flow distinctness is verified by writing the same value twice
  *     and asserting only one emission after the initial snapshot.
+ *
+ * Field initialisation — `@Before`, not class fields, not per-test:
+ *   [MainDispatcherRule] installs its test dispatcher as
+ *   [kotlinx.coroutines.Dispatchers.Main] in JUnit's `@Rule` setup
+ *   phase, which runs **before** `@Before`. `dataStore` and
+ *   `repository` are therefore safe to initialise in `@Before` —
+ *   construction happens after the test dispatcher is installed, so
+ *   any future change to `DataStorePreferencesRepository` that
+ *   captures a scope or `Dispatchers.Main` at construction time
+ *   binds to the test dispatcher rather than the real Main.
+ *
+ *   `TESTING_CONVENTIONS.kt` §2 phrases this rule as "inside
+ *   `runTest`", which is stricter than the underlying hazard requires
+ *   — `@Before` runs after `@Rule.starting()` and before `@Test`, so
+ *   it satisfies the same invariant without the per-test
+ *   construction duplication (~38 lines across this 19-test class).
+ *   If the repository ever grows construction-time behaviour that is
+ *   sensitive to *"scheduler installed and currently advancing"*
+ *   vs. *"merely installed"*, switch to per-test construction inside
+ *   `runTest`. As of this revision the SUT only assigns a cold flow
+ *   at construction, so `@Before` is sufficient.
+ *
+ *   Do **not** demote these to class-level field initializers — those
+ *   run before `@Rule.starting()`, which is the actual failure mode
+ *   the convention guards against.
  */
 class DataStorePreferencesRepositoryTest {
 
     @get:Rule
     val mainRule = MainDispatcherRule()
 
-    private val dataStore = FakeDataStore()
-    private val repository: PreferencesRepository = DataStorePreferencesRepository(dataStore)
+    private lateinit var dataStore: FakeDataStore
+    private lateinit var repository: PreferencesRepository
+
+    @Before
+    fun setUp() {
+        dataStore = FakeDataStore()
+        repository = DataStorePreferencesRepository(dataStore)
+    }
 
     // ── Defaults ─────────────────────────────────────────────────
 
