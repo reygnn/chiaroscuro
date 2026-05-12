@@ -3,8 +3,10 @@ package com.github.reygnn.chiaroscuro.viewmodel
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import app.cash.turbine.test
+import com.github.reygnn.chiaroscuro.imaging.BitmapLoader
 import com.github.reygnn.chiaroscuro.preferences.UserPreferences
 import com.github.reygnn.chiaroscuro.testing.MainDispatcherRule
+import io.mockk.mockk
 import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
@@ -27,13 +29,15 @@ import org.junit.Test
  *   - Cross-screen sync: changes made at the repository (e.g. from
  *     PreferencesScreen) reach EditorState without a user intent on
  *     the editor side.
+ *   - loadImage state-reset semantics, via the injectable [BitmapLoader]
+ *     seam (see the "Load image" section below).
  *
  * Explicitly NOT tested here (JVM unit test scope):
  *   - Bitmap pixel values. android.graphics.Bitmap/Color return defaults
  *     under unitTests.returnDefaultValues=true, making pixel arithmetic
  *     meaningless. Those go into androidTest/ (instrumented).
- *   - loadImage / applyQuickAction / analyzeAmoled / applyAmoledCorrection
- *     and saveTransparent paths that call into android.graphics.*: they
+ *   - applyQuickAction / analyzeAmoled / applyAmoledCorrection and
+ *     saveTransparent paths that call into android.graphics.*: they
  *     exist only as integration tests under androidTest/.
  *
  * Ordering convention for Turbine assertions:
@@ -251,6 +255,75 @@ class EditorViewModelTest {
 
             vm.updateCanvasSize(Size(800f, 600f))
             assertEquals(Size(800f, 600f), vm.state.value.canvasSize)
+        }
+
+    // ── Load image ───────────────────────────────────────────────
+    //
+    // loadImage previously replaced _state wholesale with a new
+    // EditorState(...), which zeroed canvasSize. Compose's
+    // Modifier.onSizeChanged does not re-fire when the layout size is
+    // unchanged, so canvasSize then remained Size.Zero for the rest of
+    // the session and writeExport's `canvasSize != Size.Zero` guard
+    // silently dropped the watermark-cover rectangle from the saved PNG.
+    //
+    // The two tests below pin the only invariants honestly verifiable on
+    // the JVM: canvasSize survives, every other transient field resets.
+    // A third test that "clears" analysis state cannot honestly fail on
+    // the JVM because analyzeAmoled is unreachable without real Bitmap
+    // ops; that contract goes into androidTest/ if it ever becomes worth
+    // pinning.
+
+    @Test
+    fun `loadImage preserves canvasSize across state reset`() =
+        runTest(mainRule.testDispatcher) {
+            val repository = FakePreferencesRepository()
+            val loader = BitmapLoader { _, _ -> null }
+            val vm = EditorViewModel(repository, loader)
+            advanceUntilIdle()
+
+            // Simulate Modifier.onSizeChanged having fired at first layout.
+            vm.updateCanvasSize(Size(1080f, 2160f))
+
+            vm.loadImage(mockk(relaxed = true), mockk(relaxed = true))
+            advanceUntilIdle()
+
+            // Regression guard: if canvasSize is reset to Zero here, the
+            // export pipeline's `canvasSize != Size.Zero` guard silently
+            // drops the watermark-cover rectangle from the saved PNG.
+            assertEquals(Size(1080f, 2160f), vm.state.value.canvasSize)
+        }
+
+    @Test
+    fun `loadImage resets transient editor state but keeps canvas size`() =
+        runTest(mainRule.testDispatcher) {
+            val repository = FakePreferencesRepository(
+                UserPreferences(rectWidth = 50, rectHeight = 60),
+            )
+            val loader = BitmapLoader { _, _ -> null }
+            val vm = EditorViewModel(repository, loader)
+            advanceUntilIdle()
+
+            // Bring state into a "dirty" shape that loading a fresh image
+            // should clear.
+            vm.updateCanvasSize(Size(800f, 600f))
+            vm.toggleRect()
+            vm.updateZoom(scaleChange = 2f, offsetChange = Offset(50f, 50f))
+
+            vm.loadImage(mockk(relaxed = true), mockk(relaxed = true))
+            advanceUntilIdle()
+
+            val s = vm.state.value
+            // Transient editor state goes back to defaults…
+            assertFalse(s.rectVisible)
+            assertEquals(1f, s.zoomScale)
+            assertEquals(Offset.Zero, s.zoomOffset)
+            // …rect dimensions are re-synced from preferences…
+            assertEquals(50, s.rectWidth)
+            assertEquals(60, s.rectHeight)
+            // …and canvasSize survives.
+            assertEquals(Size(800f, 600f), s.canvasSize)
+            // isLoading must have flipped back to false once the loader returned.
+            assertFalse(s.isLoading)
         }
 
     // ── Export message ───────────────────────────────────────────

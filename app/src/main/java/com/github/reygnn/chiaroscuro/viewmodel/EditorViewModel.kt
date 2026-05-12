@@ -2,7 +2,6 @@ package com.github.reygnn.chiaroscuro.viewmodel
 
 import android.content.Context
 import android.graphics.Bitmap
-import android.graphics.BitmapFactory
 import android.net.Uri
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
@@ -13,6 +12,8 @@ import androidx.lifecycle.viewModelScope
 import androidx.lifecycle.viewmodel.initializer
 import androidx.lifecycle.viewmodel.viewModelFactory
 import com.github.reygnn.chiaroscuro.ChiaroscuroApplication
+import com.github.reygnn.chiaroscuro.imaging.BitmapLoader
+import com.github.reygnn.chiaroscuro.imaging.ContentResolverBitmapLoader
 import com.github.reygnn.chiaroscuro.imaging.ImageGeometry
 import com.github.reygnn.chiaroscuro.imaging.ImageProcessing
 import com.github.reygnn.chiaroscuro.model.EditorState
@@ -30,6 +31,7 @@ import kotlinx.coroutines.withContext
 
 class EditorViewModel(
     private val repository: PreferencesRepository,
+    private val bitmapLoader: BitmapLoader = ContentResolverBitmapLoader,
 ) : ViewModel() {
 
     private val _state = MutableStateFlow(EditorState())
@@ -56,23 +58,54 @@ class EditorViewModel(
         }
     }
 
+    /**
+     * Resets the editor for a fresh image and triggers an async decode.
+     *
+     * **Implementation note — reset list, not allowlist.**
+     *
+     * Every transient field is written explicitly in the `copy(...)`
+     * call. `canvasSize` is omitted, which `copy` preserves: it is
+     * reported from Compose layout via `Modifier.onSizeChanged` in
+     * [com.github.reygnn.chiaroscuro.ui.components.ImageCanvas], and
+     * that callback fires only when the layout size actually changes —
+     * so field-level zeroing here would never be re-populated. The
+     * export pipeline's `canvasSize != Size.Zero` guard (see
+     * [writeExport]) would then silently drop the watermark-cover
+     * rectangle from the saved PNG: the preview shows the rectangle in
+     * place, the export omits it.
+     *
+     * The previous wholesale-replace shape (`_state.value = EditorState(...)`)
+     * made the common transient case automatic and the rare
+     * layout-sourced case silently wrong — i.e. exactly the bug this
+     * method is fixing. The reset-list shape forces every future
+     * `EditorState` field to take an explicit position: name it here
+     * to reset, omit it to inherit "preserved".
+     */
     fun loadImage(context: Context, uri: Uri) {
         viewModelScope.launch {
             val p = repository.settings.first()
             _sourceBitmap.value = null
             _analysisBitmap.value = null
-            _state.value = EditorState(
-                amoledThreshold = p.amoledThreshold,
-                amoledWarmMode  = p.amoledWarmMode,
-                rectWidth       = p.rectWidth,
-                rectHeight      = p.rectHeight,
-                isLoading       = true,
-            )
-            val bitmap = withContext(Dispatchers.IO) {
-                context.contentResolver.openInputStream(uri)?.use { stream ->
-                    BitmapFactory.decodeStream(stream)
-                }
+            _state.update {
+                it.copy(
+                    rectWidth         = p.rectWidth,
+                    rectHeight        = p.rectHeight,
+                    rectVisible       = false,
+                    zoomScale         = 1f,
+                    zoomOffset        = Offset.Zero,
+                    // canvasSize: by omission, preserved (layout-sourced).
+                    amoledThreshold   = p.amoledThreshold,
+                    amoledWarmMode    = p.amoledWarmMode,
+                    amoledPixelCount  = 0,
+                    amoledPercent     = 0f,
+                    isAnalyzing       = false,
+                    showAmoledOverlay = false,
+                    isLoading         = true,
+                    exportMessage     = null,
+                    proposedFilename  = null,
+                )
             }
+            val bitmap = bitmapLoader.load(context, uri)
             _sourceBitmap.value = bitmap
             _state.update { it.copy(isLoading = false) }
         }
