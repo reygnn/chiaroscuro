@@ -134,11 +134,14 @@ fun StringTextFieldRow(
  * be lost by re-syncing, and should visibly snap when another source
  * changes the value.
  *
- * Rounding: the displayed number and the committed value both use
- * [roundToInt] rather than truncation. With truncation, a thumb visually
- * at the maximum end (e.g. dragValue = 49.97f for a 0..50 range) would
- * display "49" and commit 49, contradicting the visual position. Rounding
- * resolves the same value to 50.
+ * Discrete stops: the [Slider] is configured with `steps =` so the thumb
+ * snaps to integer positions inside [valueRange]. This eliminates the
+ * structural class of bug where a fractional `dragValue` (e.g. 49.97f
+ * on a 0..50 range) would display "49" and commit 49 despite the thumb
+ * sitting visually at the maximum end. Rounding via [roundToInt] is
+ * kept as defense-in-depth — the snapped value is already integer-
+ * aligned, but the call documents intent and stays correct if anyone
+ * later removes the `steps` parameter.
  */
 @Composable
 fun IntSliderRow(
@@ -168,6 +171,12 @@ fun IntSliderRow(
             onValueChange = { dragValue = it },
             onValueChangeFinished = { onValueChange(dragValue.roundToInt()) },
             valueRange = valueRange.first.toFloat()..valueRange.last.toFloat(),
+            // Number of discrete stops STRICTLY BETWEEN min and max (the
+            // Compose Slider's `steps` semantics — endpoints are always
+            // selectable). For an inclusive IntRange 0..50 that's 49.
+            // coerceAtLeast(0) handles 0/1-element ranges where the
+            // Slider degrades to a fixed-position thumb.
+            steps = (valueRange.last - valueRange.first - 1).coerceAtLeast(0),
             modifier = Modifier.weight(1f),
         )
         Text(
