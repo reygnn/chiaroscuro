@@ -29,6 +29,7 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import java.io.IOException
 
 class EditorViewModel(
     private val repository: PreferencesRepository,
@@ -312,7 +313,10 @@ class EditorViewModel(
                     repository.incrementCounter()
                     ExportMessage.Saved as ExportMessage
                 }.getOrElse { e ->
-                    ExportMessage.Error(e.message)
+                    when (e) {
+                        is CannotOpenOutputStreamException -> ExportMessage.Error.CannotOpenOutputStream
+                        else -> ExportMessage.Error.Generic(e.message)
+                    }
                 }
             }
             _state.update {
@@ -393,9 +397,19 @@ class EditorViewModel(
         }
         context.contentResolver.openOutputStream(uri)?.use { out ->
             result.compress(Bitmap.CompressFormat.PNG, 100, out)
-        } ?: error("Cannot open output stream for $uri")
+        } ?: throw CannotOpenOutputStreamException()
         return origin
     }
+
+    /**
+     * Marker exception so [saveTransparent]'s `getOrElse` can distinguish
+     * the one failure we can name precisely (and therefore localize) from
+     * arbitrary framework exceptions. Private to the file because it
+     * crosses no module boundary — the sealed [ExportMessage.Error]
+     * hierarchy is what the UI sees.
+     */
+    private class CannotOpenOutputStreamException :
+        IOException("Cannot open output stream")
 
     private fun nextFilename(counter: Int, prefix: String): String =
         "${prefix}_${counter.toString().padStart(FILENAME_COUNTER_PAD, '0')}.png"

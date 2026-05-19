@@ -66,9 +66,12 @@ fun EditorScreen(
     LaunchedEffect(state.exportMessage) {
         state.exportMessage?.let { msg ->
             val text = when (msg) {
-                is ExportMessage.Saved          -> context.getString(R.string.msg_saved)
-                is ExportMessage.AmoledApplied  -> context.getString(R.string.msg_amoled_applied)
-                is ExportMessage.Error          -> context.getString(R.string.msg_error, msg.throwableMessage.orEmpty())
+                is ExportMessage.Saved -> context.getString(R.string.msg_saved)
+                is ExportMessage.AmoledApplied -> context.getString(R.string.msg_amoled_applied)
+                is ExportMessage.Error.CannotOpenOutputStream ->
+                    context.getString(R.string.msg_err_cannot_open_output)
+                is ExportMessage.Error.Generic ->
+                    context.getString(R.string.msg_error, msg.message.orEmpty())
             }
             Toast.makeText(context, text, Toast.LENGTH_SHORT).show()
             viewModel.clearExportMessage()
