@@ -49,6 +49,9 @@ class PreferencesViewModel(
     fun setRectHeight(value: Int) =
         viewModelScope.launch { repository.setRectHeight(value) }
 
+    fun setRectRotated(enabled: Boolean) =
+        viewModelScope.launch { repository.setRectRotated(enabled) }
+
     fun setCounter(value: Int) =
         viewModelScope.launch { repository.setCounter(value) }
 

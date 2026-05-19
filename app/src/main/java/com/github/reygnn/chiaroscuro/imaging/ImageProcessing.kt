@@ -80,6 +80,11 @@ internal object ImageProcessing {
     /**
      * Draws a filled black rectangle onto [bitmap] at the given image
      * coordinates. Mutates [bitmap] in place — caller owns a working copy.
+     *
+     * When [rotated] is true the rectangle is rotated 45° around its own
+     * centre, producing a diamond that matches Gemini's 4-pointed sparkle.
+     * When false it's drawn axis-aligned. Anti-aliasing is on only in the
+     * rotated path — axis-aligned draws are pixel-exact and don't need it.
      */
     fun drawBlackRect(
         bitmap: Bitmap,
@@ -87,16 +92,27 @@ internal object ImageProcessing {
         imgY: Int,
         rectWidth: Int,
         rectHeight: Int,
+        rotated: Boolean,
     ) {
         val canvas = Canvas(bitmap)
-        val paint = Paint().apply { color = AmoledTransform.COLOR_BLACK }
-        canvas.drawRect(
-            imgX.toFloat(),
-            imgY.toFloat(),
-            (imgX + rectWidth).toFloat(),
-            (imgY + rectHeight).toFloat(),
-            paint,
-        )
+        val paint = Paint().apply {
+            color = AmoledTransform.COLOR_BLACK
+            isAntiAlias = rotated
+        }
+        val left = imgX.toFloat()
+        val top = imgY.toFloat()
+        val right = (imgX + rectWidth).toFloat()
+        val bottom = (imgY + rectHeight).toFloat()
+        if (rotated) {
+            val cx = imgX + rectWidth / 2f
+            val cy = imgY + rectHeight / 2f
+            canvas.save()
+            canvas.rotate(45f, cx, cy)
+            canvas.drawRect(left, top, right, bottom, paint)
+            canvas.restore()
+        } else {
+            canvas.drawRect(left, top, right, bottom, paint)
+        }
     }
 
     private fun Bitmap.toArgbArray(): IntArray {

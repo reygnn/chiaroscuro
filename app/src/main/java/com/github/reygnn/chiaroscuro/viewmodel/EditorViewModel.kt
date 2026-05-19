@@ -16,6 +16,7 @@ import com.github.reygnn.chiaroscuro.imaging.BitmapLoader
 import com.github.reygnn.chiaroscuro.imaging.ContentResolverBitmapLoader
 import com.github.reygnn.chiaroscuro.imaging.ImageGeometry
 import com.github.reygnn.chiaroscuro.imaging.ImageProcessing
+import com.github.reygnn.chiaroscuro.imaging.RectOrigin
 import com.github.reygnn.chiaroscuro.model.EditorState
 import com.github.reygnn.chiaroscuro.model.ExportMessage
 import com.github.reygnn.chiaroscuro.preferences.ExportBackground
@@ -50,8 +51,11 @@ class EditorViewModel(
                     it.copy(
                         amoledThreshold = p.amoledThreshold,
                         amoledWarmMode  = p.amoledWarmMode,
+                        rectX           = p.rectX,
+                        rectY           = p.rectY,
                         rectWidth       = p.rectWidth,
                         rectHeight      = p.rectHeight,
+                        rectRotated     = p.rectRotated,
                     )
                 }
             }
@@ -88,9 +92,13 @@ class EditorViewModel(
             _analysisBitmap.value = null
             _state.update {
                 it.copy(
+                    rectX             = p.rectX,
+                    rectY             = p.rectY,
                     rectWidth         = p.rectWidth,
                     rectHeight        = p.rectHeight,
+                    rectRotated       = p.rectRotated,
                     rectVisible       = false,
+                    rectBlinkPulse    = 0,
                     zoomScale         = 1f,
                     zoomOffset        = Offset.Zero,
                     // canvasSize: by omission, preserved (layout-sourced).
@@ -125,8 +133,52 @@ class EditorViewModel(
         viewModelScope.launch { repository.setRectHeight(value) }
     }
 
+    /**
+     * Toggles the watermark-cover rectangle.
+     *
+     * On the ON-edge, if a source image is loaded, the canvas size is known,
+     * and the persisted (rectX, rectY) falls fully inside the source image,
+     * the zoom offset is set so the canvas-centered rect lands directly on
+     * the stored sparkle position — and a blink pulse is fired so the user
+     * spots the rect after the jump.
+     *
+     * If any of those preconditions fail, the rect appears in its default
+     * canvas-center position and the user pans manually.
+     */
     fun toggleRect() {
-        _state.update { it.copy(rectVisible = !it.rectVisible) }
+        _state.update { current ->
+            if (current.rectVisible) return@update current.copy(rectVisible = false)
+
+            // Turning ON: try to jump onto stored (rectX, rectY).
+            val src = _sourceBitmap.value
+                ?: return@update current.copy(rectVisible = true)
+            val canvas = current.canvasSize
+            if (canvas == Size.Zero) return@update current.copy(rectVisible = true)
+
+            val tx = current.rectX
+            val ty = current.rectY
+            val inBounds = tx >= 0f && ty >= 0f &&
+                tx + current.rectWidth <= src.width &&
+                ty + current.rectHeight <= src.height
+            if (!inBounds) return@update current.copy(rectVisible = true)
+
+            val offset = ImageGeometry.computeZoomOffsetForRectAt(
+                imageWidth = src.width,
+                imageHeight = src.height,
+                canvasWidth = canvas.width,
+                canvasHeight = canvas.height,
+                rectWidth = current.rectWidth,
+                rectHeight = current.rectHeight,
+                targetImageX = tx,
+                targetImageY = ty,
+                zoomScale = current.zoomScale,
+            )
+            current.copy(
+                rectVisible = true,
+                zoomOffset = Offset(offset.x, offset.y),
+                rectBlinkPulse = current.rectBlinkPulse + 1,
+            )
+        }
     }
 
     fun updateZoom(scaleChange: Float, offsetChange: Offset) {
@@ -160,7 +212,7 @@ class EditorViewModel(
                     rectVisible      = p.fabPlaceRect,
                     rectWidth        = p.rectWidth,
                     rectHeight       = p.rectHeight,
-                    proposedFilename = nextFilename(p.sleeveCounter, p.filenamePrefix),
+                    proposedFilename = nextFilename(p.fileCounter, p.filenamePrefix),
                 )
             }
         }
@@ -193,7 +245,12 @@ class EditorViewModel(
                 it.copy(
                     isAnalyzing       = false,
                     amoledPixelCount  = analysis.nearBlackCount,
-                    amoledPercent     = analysis.nearBlackCount.toFloat() / (src.width * src.height) * 100f,
+                    // Long multiplication: src.width * src.height as Int
+                    // overflows around 46341×46341 (=Int.MAX_VALUE), which
+                    // a desktop screenshot or astro photo can realistically
+                    // exceed. The Long product fits any conceivable image.
+                    amoledPercent     = analysis.nearBlackCount.toFloat() /
+                        (src.width.toLong() * src.height) * 100f,
                     showAmoledOverlay = true,
                 )
             }
@@ -243,7 +300,15 @@ class EditorViewModel(
             val background = repository.settings.first().exportBackground
             val message: ExportMessage = withContext(Dispatchers.IO) {
                 runCatching {
-                    writeExport(context, uri, src, s, background)
+                    val origin = writeExport(context, uri, src, s, background)
+                    if (origin != null) {
+                        // Persist the rect's effective image-space position so
+                        // the next image load can jump straight to it. The
+                        // defaults (683/1291) are a guess; this turns every
+                        // successful export into a calibration step.
+                        repository.setRectX(origin.x.toFloat())
+                        repository.setRectY(origin.y.toFloat())
+                    }
                     repository.incrementCounter()
                     ExportMessage.Saved as ExportMessage
                 }.getOrElse { e ->
@@ -264,6 +329,24 @@ class EditorViewModel(
     }
 
     /**
+     * Clears the auto-set [EditorState.proposedFilename] after the save
+     * dialog is dismissed without writing a file.
+     *
+     * Why this exists: [applyQuickAction] sets [EditorState.proposedFilename]
+     * to drive a `LaunchedEffect`-keyed launch of the SAF CreateDocument
+     * picker. If the user cancels that picker (back press, swipe down on
+     * the sheet), the launcher callback receives `uri = null` and we never
+     * enter [saveTransparent] — which is the only other path that nulls
+     * the field. Without this method the field would stay non-null, the
+     * `LaunchedEffect` would not re-fire on the next Quick-Action with the
+     * *same* suggested filename (e.g. because the file counter hasn't
+     * advanced), and the FAB would appear to do nothing.
+     */
+    fun clearProposedFilename() {
+        _state.update { it.copy(proposedFilename = null) }
+    }
+
+    /**
      * Renders the final PNG.
      *
      * Depending on [background]:
@@ -276,6 +359,10 @@ class EditorViewModel(
      * In both modes, any black rectangle drawn by [ImageProcessing.drawBlackRect]
      * is applied first, so the mode switch decides how that rectangle's
      * pixels are treated in the final image.
+     *
+     * Returns the rect's image-space top-left origin when the rect was
+     * drawn (so the caller can persist it for cross-image position memory),
+     * or null when the rect was hidden.
      */
     private fun writeExport(
         context: Context,
@@ -283,10 +370,10 @@ class EditorViewModel(
         src: Bitmap,
         s: EditorState,
         background: ExportBackground,
-    ) {
+    ): RectOrigin? {
         val working = src.copy(Bitmap.Config.ARGB_8888, true)
-        if (s.rectVisible && s.canvasSize != Size.Zero) {
-            val origin = ImageGeometry.computeRectOriginInImage(
+        val origin: RectOrigin? = if (s.rectVisible && s.canvasSize != Size.Zero) {
+            val o = ImageGeometry.computeRectOriginInImage(
                 imageWidth = working.width,
                 imageHeight = working.height,
                 canvasWidth = s.canvasSize.width,
@@ -297,8 +384,9 @@ class EditorViewModel(
                 zoomOffsetX = s.zoomOffset.x,
                 zoomOffsetY = s.zoomOffset.y,
             )
-            ImageProcessing.drawBlackRect(working, origin.x, origin.y, s.rectWidth, s.rectHeight)
-        }
+            ImageProcessing.drawBlackRect(working, o.x, o.y, s.rectWidth, s.rectHeight, s.rectRotated)
+            o
+        } else null
         val result = when (background) {
             ExportBackground.AMOLED -> working
             ExportBackground.TRANSPARENT -> ImageProcessing.blackToTransparent(working)
@@ -306,6 +394,7 @@ class EditorViewModel(
         context.contentResolver.openOutputStream(uri)?.use { out ->
             result.compress(Bitmap.CompressFormat.PNG, 100, out)
         } ?: error("Cannot open output stream for $uri")
+        return origin
     }
 
     private fun nextFilename(counter: Int, prefix: String): String =

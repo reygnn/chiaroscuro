@@ -280,12 +280,13 @@ amoled_threshold     Int       50          [0, 50]             AMOLED filter thr
 amoled_warm_mode     Boolean   false       —                   Warm tint mode
 fab_apply_amoled     Boolean   true        —                   FAB: apply AMOLED step
 fab_place_rect       Boolean   true        —                   FAB: place rectangle step
-rect_x               Float     683f        unvalidated         (legacy — UI-editable, not used)
-rect_y               Float     1291f       unvalidated         (legacy — UI-editable, not used)
+rect_x               Float     683f        unvalidated         Sparkle position (image px) — auto-saved on export
+rect_y               Float     1291f       unvalidated         Sparkle position (image px) — auto-saved on export
 rect_width           Int       57          ≥ 1                 Rectangle width in pixels
 rect_height          Int       57          ≥ 1                 Rectangle height in pixels
-sleeve_counter       Int       1           ≥ 1                 Auto-incremented on each save
-filename_prefix      String    "sleeve"    blank → default     Filename prefix
+rect_rotated         Boolean   true        —                   Render the cover as a 45° diamond
+file_counter         Int       1           ≥ 1                 Auto-incremented on each save (legacy key: `sleeve_counter`, still read once)
+filename_prefix      String    "image"     blank → default     Filename prefix
 export_background    String    "AMOLED"    enum or fallback    Export rendering mode
 ```
 

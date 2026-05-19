@@ -1,5 +1,7 @@
 package com.github.reygnn.chiaroscuro.imaging
 
+import kotlin.math.roundToInt
+
 /**
  * Pure geometric math for mapping the fixed-center preview rectangle
  * from screen space back to image-pixel space.
@@ -25,8 +27,14 @@ internal object ImageGeometry {
      * pointing down, zoom scale applied around canvas center, zoom
      * translation applied after scale.
      *
-     * Returns integer coordinates: the export pipeline draws at integer
-     * image positions, so fractional values would be discarded anyway.
+     * Returns integer coordinates via [roundToInt]: the export pipeline
+     * draws at integer image positions, so the fractional component has
+     * to collapse somewhere. We round rather than truncate to keep the
+     * worst-case error symmetric (±0.5px instead of −1..0px systematic
+     * bias toward the top-left). The difference is invisible for the
+     * primary watermark-cover workflow but is the right default; if a
+     * future feature needs sub-pixel placement it should change the
+     * return type, not the rounding mode.
      */
     fun computeRectOriginInImage(
         imageWidth: Int,
@@ -52,10 +60,46 @@ internal object ImageGeometry {
         val canvasY = (screenY - zoomOffsetY - canvasHeight / 2f) / zoomScale + canvasHeight / 2f
 
         return RectOrigin(
-            x = ((canvasX - baseOffX) / baseScale).toInt(),
-            y = ((canvasY - baseOffY) / baseScale).toInt(),
+            x = ((canvasX - baseOffX) / baseScale).roundToInt(),
+            y = ((canvasY - baseOffY) / baseScale).roundToInt(),
         )
+    }
+
+    /**
+     * Inverse of [computeRectOriginInImage]: compute the zoom offset that
+     * positions the canvas-centered preview rectangle so its top-left lands
+     * on the requested image-space coordinates [targetImageX], [targetImageY].
+     *
+     * Used by the editor to "jump" the rectangle onto a remembered sparkle
+     * position (rectX/rectY in UserPreferences) when the user re-enables the
+     * cover-up.
+     *
+     * Round-trip invariant: feeding the returned offset back into
+     * [computeRectOriginInImage] with the same other arguments recovers the
+     * supplied target (modulo the `roundToInt()` rounding in the forward path).
+     */
+    fun computeZoomOffsetForRectAt(
+        imageWidth: Int,
+        imageHeight: Int,
+        canvasWidth: Float,
+        canvasHeight: Float,
+        rectWidth: Int,
+        rectHeight: Int,
+        targetImageX: Float,
+        targetImageY: Float,
+        zoomScale: Float,
+    ): ZoomOffset {
+        val baseScale = minOf(canvasWidth / imageWidth, canvasHeight / imageHeight)
+        val baseOffX = (canvasWidth - imageWidth * baseScale) / 2f
+        val baseOffY = (canvasHeight - imageHeight * baseScale) / 2f
+        val offsetX = zoomScale *
+            (canvasWidth / 2f - baseOffX - baseScale * (targetImageX + rectWidth / 2f))
+        val offsetY = zoomScale *
+            (canvasHeight / 2f - baseOffY - baseScale * (targetImageY + rectHeight / 2f))
+        return ZoomOffset(offsetX, offsetY)
     }
 }
 
 internal data class RectOrigin(val x: Int, val y: Int)
+
+internal data class ZoomOffset(val x: Float, val y: Float)

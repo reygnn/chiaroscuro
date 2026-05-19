@@ -33,7 +33,7 @@ import kotlin.math.roundToInt
  *
  * Layout (bottom-to-top when expanded):
  *   ⚡ Quick Action      — runs the user's preconfigured one-shot pipeline
- *   ▭ Rectangle toggle   — coloured "selected" when [rectVisible] is true
+ *   ◇ Rectangle toggle   — coloured "selected" when [rectVisible] is true
  *   🔍 / ✅              — Analyze AMOLED, swaps to Apply when an overlay is showing
  *   💾 Save              — fires the SAF save launcher
  *   📂 Load              — fires the SAF open-document launcher
@@ -113,7 +113,7 @@ fun EditorFab(
                         onClick = { expanded = false; onAnalyzeOrApply() },
                     )
                     MiniFab(
-                        symbol = "▭",
+                        symbol = "◇",
                         contentDescription = stringResource(R.string.cd_rect_toggle),
                         enabled = hasImage,
                         selected = rectVisible,

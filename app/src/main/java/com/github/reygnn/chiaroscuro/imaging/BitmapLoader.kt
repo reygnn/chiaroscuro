@@ -30,7 +30,23 @@ fun interface BitmapLoader {
 }
 
 /**
- * Reads from [Context.contentResolver] and decodes via [BitmapFactory].
+ * Reads from [Context.contentResolver] and decodes via [BitmapFactory],
+ * then **normalizes the result to [Bitmap.Config.ARGB_8888]**.
+ *
+ * The normalization is mandatory, not cosmetic. On Android Q+ the platform
+ * may decode certain image sources (HEIF, some animated/large PNGs, system
+ * picker hand-offs) into [Bitmap.Config.HARDWARE] — a GPU-backed config
+ * whose pixels live in graphics memory and cannot be read with
+ * [Bitmap.getPixels]. The downstream `ImageProcessing` adapter calls
+ * `getPixels` unconditionally, so a HARDWARE bitmap reaches the AMOLED
+ * analyze/apply path and throws `IllegalStateException` at the first user
+ * action.
+ *
+ * `inPreferredConfig = ARGB_8888` is only a hint and the decoder is free
+ * to ignore it for hardware-accelerated paths, so the explicit `copy` is
+ * the only reliable guarantee. The original is recycled when we own it
+ * (i.e. when a copy was actually made) to release the native buffer
+ * promptly.
  *
  * The IO-dispatcher hop for the decode lives here so tests can inject a
  * purely in-memory loader and stay on the test dispatcher. Other
@@ -42,6 +58,17 @@ fun interface BitmapLoader {
 object ContentResolverBitmapLoader : BitmapLoader {
     override suspend fun load(context: Context, uri: Uri): Bitmap? =
         withContext(Dispatchers.IO) {
-            context.contentResolver.openInputStream(uri)?.use(BitmapFactory::decodeStream)
+            val raw = context.contentResolver.openInputStream(uri)?.use { stream ->
+                val options = BitmapFactory.Options().apply {
+                    inPreferredConfig = Bitmap.Config.ARGB_8888
+                }
+                BitmapFactory.decodeStream(stream, null, options)
+            } ?: return@withContext null
+
+            if (raw.config == Bitmap.Config.ARGB_8888) {
+                raw
+            } else {
+                raw.copy(Bitmap.Config.ARGB_8888, true).also { raw.recycle() }
+            }
         }
 }

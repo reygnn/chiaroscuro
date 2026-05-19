@@ -25,6 +25,7 @@ interface PreferencesRepository {
     suspend fun setRectY(value: Float)
     suspend fun setRectWidth(value: Int)
     suspend fun setRectHeight(value: Int)
+    suspend fun setRectRotated(enabled: Boolean)
 
     suspend fun setCounter(value: Int)
     suspend fun incrementCounter()

@@ -16,7 +16,8 @@ data class UserPreferences(
     val rectY: Float                 = DEFAULT_RECT_Y,
     val rectWidth: Int               = DEFAULT_RECT_WIDTH,
     val rectHeight: Int              = DEFAULT_RECT_HEIGHT,
-    val sleeveCounter: Int           = DEFAULT_SLEEVE_COUNTER,
+    val rectRotated: Boolean         = DEFAULT_RECT_ROTATED,
+    val fileCounter: Int             = DEFAULT_FILE_COUNTER,
     val filenamePrefix: String       = DEFAULT_FILENAME_PREFIX,
     val exportBackground: ExportBackground = DEFAULT_EXPORT_BACKGROUND,
 ) {
@@ -29,14 +30,15 @@ data class UserPreferences(
         const val DEFAULT_RECT_Y           = 1291f
         const val DEFAULT_RECT_WIDTH       = 57
         const val DEFAULT_RECT_HEIGHT      = 57
-        const val DEFAULT_SLEEVE_COUNTER   = 1
-        const val DEFAULT_FILENAME_PREFIX  = "sleeve"
+        const val DEFAULT_RECT_ROTATED     = true
+        const val DEFAULT_FILE_COUNTER     = 1
+        const val DEFAULT_FILENAME_PREFIX  = "image"
         val DEFAULT_EXPORT_BACKGROUND      = ExportBackground.AMOLED
 
         const val AMOLED_THRESHOLD_MIN = 0
         const val AMOLED_THRESHOLD_MAX = 50
         const val RECT_SIZE_MIN        = 1
-        const val SLEEVE_COUNTER_MIN   = 1
+        const val FILE_COUNTER_MIN     = 1
     }
 }
 

@@ -14,8 +14,8 @@ android {
         applicationId = "com.github.reygnn.chiaroscuro"
         minSdk = 36
         targetSdk = 36
-        versionCode = 2
-        versionName = "1.0.1"
+        versionCode = 21
+        versionName = "0.52"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
@@ -97,6 +97,7 @@ dependencies {
     implementation(libs.androidx.navigation.compose)
 
     debugImplementation(libs.androidx.ui.tooling)
+    debugImplementation(libs.androidx.ui.test.manifest)
 
     testImplementation(libs.junit)
     testImplementation(libs.mockk)
@@ -104,4 +105,5 @@ dependencies {
     testImplementation(libs.turbine)
     testImplementation(libs.robolectric)
     testImplementation(libs.androidx.test.ext.junit)
+    testImplementation(libs.androidx.ui.test.junit4)
 }

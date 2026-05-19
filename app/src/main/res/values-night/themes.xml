@@ -1,7 +1,13 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
+    <!--
+        Dark-mode splash. Background pulls the wallpaper-derived
+        near-black neutral so the splash matches the Material You
+        palette of the Compose UI it hands off to. Available since
+        API 31; minSdk 36 makes the fallback path unreachable.
+    -->
     <style name="Theme.Chiaroscuro" parent="android:Theme.Material.NoActionBar">
-        <item name="android:windowSplashScreenBackground">#0A0A0A</item>
+        <item name="android:windowSplashScreenBackground">@android:color/system_neutral1_900</item>
         <item name="android:windowSplashScreenAnimatedIcon">@mipmap/ic_launcher</item>
     </style>
 </resources>

@@ -94,6 +94,7 @@ fun PreferencesScreen(
             IntTextFieldRow(stringResource(R.string.pref_rect_y), prefs.rectY.toInt(), { vm.setRectY(it.toFloat()) }, suffix = pxSuffix)
             IntTextFieldRow(stringResource(R.string.pref_rect_width), prefs.rectWidth, vm::setRectWidth, suffix = pxSuffix)
             IntTextFieldRow(stringResource(R.string.pref_rect_height), prefs.rectHeight, vm::setRectHeight, suffix = pxSuffix)
+            CheckRow(stringResource(R.string.pref_rect_rotated), prefs.rectRotated, vm::setRectRotated)
 
             HorizontalDivider()
 
@@ -102,13 +103,13 @@ fun PreferencesScreen(
                 text = stringResource(
                     R.string.pref_next_file,
                     prefs.filenamePrefix,
-                    prefs.sleeveCounter.toString().padStart(3, '0'),
+                    prefs.fileCounter.toString().padStart(3, '0'),
                 ),
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
             StringTextFieldRow(stringResource(R.string.pref_prefix), prefs.filenamePrefix, vm::setFilenamePrefix)
-            IntTextFieldRow(stringResource(R.string.pref_counter), prefs.sleeveCounter, vm::setCounter)
+            IntTextFieldRow(stringResource(R.string.pref_counter), prefs.fileCounter, vm::setCounter)
             OutlinedButton(
                 onClick = { vm.resetCounter() },
                 modifier = Modifier.fillMaxWidth(),

@@ -24,6 +24,7 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
+import kotlin.math.roundToInt
 
 /**
  * OutlinedTextField for integer input that keeps user keystrokes in local
@@ -132,6 +133,12 @@ fun StringTextFieldRow(
  * slider, unlike a text field, has no concurrent user input that could
  * be lost by re-syncing, and should visibly snap when another source
  * changes the value.
+ *
+ * Rounding: the displayed number and the committed value both use
+ * [roundToInt] rather than truncation. With truncation, a thumb visually
+ * at the maximum end (e.g. dragValue = 49.97f for a 0..50 range) would
+ * display "49" and commit 49, contradicting the visual position. Rounding
+ * resolves the same value to 50.
  */
 @Composable
 fun IntSliderRow(
@@ -159,12 +166,12 @@ fun IntSliderRow(
         Slider(
             value = dragValue,
             onValueChange = { dragValue = it },
-            onValueChangeFinished = { onValueChange(dragValue.toInt()) },
+            onValueChangeFinished = { onValueChange(dragValue.roundToInt()) },
             valueRange = valueRange.first.toFloat()..valueRange.last.toFloat(),
             modifier = Modifier.weight(1f),
         )
         Text(
-            text = "${dragValue.toInt()}$valueSuffix",
+            text = "${dragValue.roundToInt()}$valueSuffix",
             style = MaterialTheme.typography.labelSmall,
             modifier = Modifier.width(valueWidth),
             textAlign = TextAlign.End,

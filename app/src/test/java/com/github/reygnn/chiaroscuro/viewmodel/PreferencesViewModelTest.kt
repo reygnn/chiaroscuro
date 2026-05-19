@@ -88,11 +88,11 @@ class PreferencesViewModelTest {
 
         vm.setCounter(42)
         advanceUntilIdle()
-        assertEquals(42, repository.current.sleeveCounter)
+        assertEquals(42, repository.current.fileCounter)
 
         vm.resetCounter()
         advanceUntilIdle()
-        assertEquals(UserPreferences.SLEEVE_COUNTER_MIN, repository.current.sleeveCounter)
+        assertEquals(UserPreferences.FILE_COUNTER_MIN, repository.current.fileCounter)
     }
 
     @Test

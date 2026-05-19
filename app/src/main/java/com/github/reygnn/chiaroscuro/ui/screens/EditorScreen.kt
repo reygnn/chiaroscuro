@@ -50,7 +50,18 @@ fun EditorScreen(
 
     val saveLauncher = rememberLauncherForActivityResult(
         ActivityResultContracts.CreateDocument("image/png"),
-    ) { uri -> uri?.let { viewModel.saveTransparent(context, it) } }
+    ) { uri ->
+        if (uri != null) {
+            viewModel.saveTransparent(context, uri)
+        } else {
+            // User cancelled the SAF picker (back press / swipe-dismiss).
+            // The proposedFilename, if set by applyQuickAction, would
+            // otherwise stay sticky and block the next Quick-Action from
+            // re-triggering the LaunchedEffect when the suggested filename
+            // is identical (e.g. counter not yet advanced).
+            viewModel.clearProposedFilename()
+        }
+    }
 
     LaunchedEffect(state.exportMessage) {
         state.exportMessage?.let { msg ->

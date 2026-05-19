@@ -69,21 +69,25 @@ internal class FakePreferencesRepository(
         )
     }
 
+    override suspend fun setRectRotated(enabled: Boolean) {
+        _settings.value = _settings.value.copy(rectRotated = enabled)
+    }
+
     override suspend fun setCounter(value: Int) {
         _settings.value = _settings.value.copy(
-            sleeveCounter = value.coerceAtLeast(UserPreferences.SLEEVE_COUNTER_MIN),
+            fileCounter = value.coerceAtLeast(UserPreferences.FILE_COUNTER_MIN),
         )
     }
 
     override suspend fun incrementCounter() {
         _settings.value = _settings.value.copy(
-            sleeveCounter = _settings.value.sleeveCounter + 1,
+            fileCounter = _settings.value.fileCounter + 1,
         )
     }
 
     override suspend fun resetCounter() {
         _settings.value = _settings.value.copy(
-            sleeveCounter = UserPreferences.SLEEVE_COUNTER_MIN,
+            fileCounter = UserPreferences.FILE_COUNTER_MIN,
         )
     }
 

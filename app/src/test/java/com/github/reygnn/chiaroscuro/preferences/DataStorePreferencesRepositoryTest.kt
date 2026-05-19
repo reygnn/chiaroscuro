@@ -4,9 +4,10 @@ import app.cash.turbine.test
 import com.github.reygnn.chiaroscuro.preferences.UserPreferences.Companion.AMOLED_THRESHOLD_MAX
 import com.github.reygnn.chiaroscuro.preferences.UserPreferences.Companion.AMOLED_THRESHOLD_MIN
 import com.github.reygnn.chiaroscuro.preferences.UserPreferences.Companion.DEFAULT_FILENAME_PREFIX
+import com.github.reygnn.chiaroscuro.preferences.UserPreferences.Companion.FILE_COUNTER_MIN
 import com.github.reygnn.chiaroscuro.preferences.UserPreferences.Companion.RECT_SIZE_MIN
-import com.github.reygnn.chiaroscuro.preferences.UserPreferences.Companion.SLEEVE_COUNTER_MIN
 import com.github.reygnn.chiaroscuro.testing.MainDispatcherRule
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
@@ -132,11 +133,25 @@ class DataStorePreferencesRepositoryTest {
     }
 
     @Test
+    fun `setRectRotated round-trips both states`() = runTest(mainRule.testDispatcher) {
+        repository.setRectRotated(false)
+        repository.settings.test {
+            assertEquals(false, awaitItem().rectRotated)
+            cancelAndIgnoreRemainingEvents()
+        }
+        repository.setRectRotated(true)
+        repository.settings.test {
+            assertEquals(true, awaitItem().rectRotated)
+            cancelAndIgnoreRemainingEvents()
+        }
+    }
+
+    @Test
     fun `setCounter clamps values below 1`() = runTest(mainRule.testDispatcher) {
         repository.setCounter(0)
 
         repository.settings.test {
-            assertEquals(SLEEVE_COUNTER_MIN, awaitItem().sleeveCounter)
+            assertEquals(FILE_COUNTER_MIN, awaitItem().fileCounter)
             cancelAndIgnoreRemainingEvents()
         }
     }
@@ -149,7 +164,7 @@ class DataStorePreferencesRepositoryTest {
         repository.incrementCounter()
 
         repository.settings.test {
-            assertEquals(6, awaitItem().sleeveCounter)
+            assertEquals(6, awaitItem().fileCounter)
             cancelAndIgnoreRemainingEvents()
         }
     }
@@ -160,7 +175,7 @@ class DataStorePreferencesRepositoryTest {
             repository.incrementCounter()
 
             repository.settings.test {
-                assertEquals(SLEEVE_COUNTER_MIN + 1, awaitItem().sleeveCounter)
+                assertEquals(FILE_COUNTER_MIN + 1, awaitItem().fileCounter)
                 cancelAndIgnoreRemainingEvents()
             }
         }
@@ -171,10 +186,68 @@ class DataStorePreferencesRepositoryTest {
         repository.resetCounter()
 
         repository.settings.test {
-            assertEquals(SLEEVE_COUNTER_MIN, awaitItem().sleeveCounter)
+            assertEquals(FILE_COUNTER_MIN, awaitItem().fileCounter)
             cancelAndIgnoreRemainingEvents()
         }
     }
+
+    // ── Legacy migration: pre-1.0.3 stored the counter under the
+    //    "sleeve_counter" key. New code reads "file_counter" but falls
+    //    back to the legacy key so an existing install doesn't snap its
+    //    counter back to 1 on upgrade. Every counter write removes the
+    //    legacy key so the schema converges.
+
+    @Test
+    fun `legacy sleeve_counter key is read when file_counter is absent`() =
+        runTest(mainRule.testDispatcher) {
+            val seeded = androidx.datastore.preferences.core.mutablePreferencesOf().apply {
+                set(androidx.datastore.preferences.core.intPreferencesKey("sleeve_counter"), 42)
+            }.toPreferences()
+            val ds = FakeDataStore(initial = seeded)
+            val repo = DataStorePreferencesRepository(ds)
+
+            repo.settings.test {
+                assertEquals(42, awaitItem().fileCounter)
+                cancelAndIgnoreRemainingEvents()
+            }
+        }
+
+    @Test
+    fun `file_counter wins over legacy key when both present`() =
+        runTest(mainRule.testDispatcher) {
+            val seeded = androidx.datastore.preferences.core.mutablePreferencesOf().apply {
+                set(androidx.datastore.preferences.core.intPreferencesKey("sleeve_counter"), 99)
+                set(androidx.datastore.preferences.core.intPreferencesKey("file_counter"), 7)
+            }.toPreferences()
+            val ds = FakeDataStore(initial = seeded)
+            val repo = DataStorePreferencesRepository(ds)
+
+            repo.settings.test {
+                assertEquals(7, awaitItem().fileCounter)
+                cancelAndIgnoreRemainingEvents()
+            }
+        }
+
+    @Test
+    fun `incrementCounter from legacy key migrates onto file_counter`() =
+        runTest(mainRule.testDispatcher) {
+            val seeded = androidx.datastore.preferences.core.mutablePreferencesOf().apply {
+                set(androidx.datastore.preferences.core.intPreferencesKey("sleeve_counter"), 10)
+            }.toPreferences()
+            val ds = FakeDataStore(initial = seeded)
+            val repo = DataStorePreferencesRepository(ds)
+
+            repo.incrementCounter()
+
+            repo.settings.test {
+                val snapshot = awaitItem()
+                assertEquals(11, snapshot.fileCounter)
+                cancelAndIgnoreRemainingEvents()
+            }
+            // Legacy key must be gone from the store after the write.
+            val legacyKey = androidx.datastore.preferences.core.intPreferencesKey("sleeve_counter")
+            assertEquals(null, ds.data.first()[legacyKey])
+        }
 
     // ── Filename prefix ──────────────────────────────────────────
 

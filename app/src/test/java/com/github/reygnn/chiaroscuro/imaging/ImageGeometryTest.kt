@@ -84,4 +84,86 @@ class ImageGeometryTest {
         )
         assertEquals(RectOrigin(50, 40), origin)
     }
+
+    @Test
+    fun `inverse zero offset corresponds to rect at image center`() {
+        // A 100x100 image rendered into a 200x200 canvas centers it; with
+        // a 20x20 rect and zoomScale=1, the canvas-center rect lands at
+        // image-space (40, 40). Asking the inverse to land the rect THERE
+        // must yield a zero offset.
+        val zo = ImageGeometry.computeZoomOffsetForRectAt(
+            imageWidth = 100, imageHeight = 100,
+            canvasWidth = 200f, canvasHeight = 200f,
+            rectWidth = 20, rectHeight = 20,
+            targetImageX = 40f, targetImageY = 40f,
+            zoomScale = 1f,
+        )
+        assertEquals(0f, zo.x)
+        assertEquals(0f, zo.y)
+    }
+
+    @Test
+    fun `forward then inverse round-trips at identity zoom`() {
+        // Pick an arbitrary target inside the image; the offset returned
+        // by the inverse must, when fed back through the forward function,
+        // recover the same target (up to the forward path's roundToInt()).
+        val target = Pair(73f, 12f)
+        val zo = ImageGeometry.computeZoomOffsetForRectAt(
+            imageWidth = 200, imageHeight = 100,
+            canvasWidth = 400f, canvasHeight = 400f,
+            rectWidth = 25, rectHeight = 25,
+            targetImageX = target.first, targetImageY = target.second,
+            zoomScale = 1f,
+        )
+        val origin = ImageGeometry.computeRectOriginInImage(
+            imageWidth = 200, imageHeight = 100,
+            canvasWidth = 400f, canvasHeight = 400f,
+            rectWidth = 25, rectHeight = 25,
+            zoomScale = 1f, zoomOffsetX = zo.x, zoomOffsetY = zo.y,
+        )
+        assertEquals(target.first.toInt(), origin.x)
+        assertEquals(target.second.toInt(), origin.y)
+    }
+
+    @Test
+    fun `forward then inverse round-trips under zoom`() {
+        // Same round-trip under a non-identity zoom.
+        val zo = ImageGeometry.computeZoomOffsetForRectAt(
+            imageWidth = 300, imageHeight = 300,
+            canvasWidth = 600f, canvasHeight = 600f,
+            rectWidth = 30, rectHeight = 30,
+            targetImageX = 200f, targetImageY = 50f,
+            zoomScale = 2.5f,
+        )
+        val origin = ImageGeometry.computeRectOriginInImage(
+            imageWidth = 300, imageHeight = 300,
+            canvasWidth = 600f, canvasHeight = 600f,
+            rectWidth = 30, rectHeight = 30,
+            zoomScale = 2.5f, zoomOffsetX = zo.x, zoomOffsetY = zo.y,
+        )
+        assertEquals(200, origin.x)
+        assertEquals(50, origin.y)
+    }
+
+    @Test
+    fun `fractional position is rounded to nearest pixel not truncated`() {
+        // Introduce a clearly fractional canvasX via a sub-integer pan offset.
+        // 100x100 image in 200x200 canvas at baseScale=2 (exact). Rect 20x20.
+        // zoomOffsetX = 0.6 → canvasX = 80 - 0.6 - 100 + 100 = 79.4.
+        // Image-space x = 79.4 / 2 = 39.7.
+        //
+        // Truncation: 39  (one pixel TOO FAR LEFT — the original bug)
+        // Rounding:   40  (correct nearest pixel)
+        //
+        // The fractional component is far from 0.5 so Float precision
+        // jitter cannot flip the outcome — the test pins behavior, not
+        // arithmetic.
+        val origin = ImageGeometry.computeRectOriginInImage(
+            imageWidth = 100, imageHeight = 100,
+            canvasWidth = 200f, canvasHeight = 200f,
+            rectWidth = 20, rectHeight = 20,
+            zoomScale = 1f, zoomOffsetX = 0.6f, zoomOffsetY = 0f,
+        )
+        assertEquals(40, origin.x)
+    }
 }

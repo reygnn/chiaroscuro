@@ -1,17 +1,20 @@
 package com.github.reygnn.chiaroscuro.viewmodel
 
+import android.graphics.Bitmap
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import app.cash.turbine.test
 import com.github.reygnn.chiaroscuro.imaging.BitmapLoader
 import com.github.reygnn.chiaroscuro.preferences.UserPreferences
 import com.github.reygnn.chiaroscuro.testing.MainDispatcherRule
+import io.mockk.every
 import io.mockk.mockk
 import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotEquals
+import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Rule
@@ -143,6 +146,123 @@ class EditorViewModelTest {
 
             vm.toggleRect()
             assertFalse(vm.state.value.rectVisible)
+        }
+
+    // ── toggleRect: position-jump on activation ──────────────────
+    //
+    // When the user re-enables the cover-up rect, the editor jumps the
+    // canvas-pan so the rect lands directly over the persisted sparkle
+    // position (rectX/rectY in prefs) — provided that position lies fully
+    // inside the loaded source image. Otherwise the rect appears at canvas
+    // center and the user pans manually.
+
+    @Test
+    fun `toggleRect ON jumps onto stored rectX rectY when in bounds`() =
+        runTest(mainRule.testDispatcher) {
+            val repository = FakePreferencesRepository(
+                UserPreferences(
+                    rectX = 50f, rectY = 50f,
+                    rectWidth = 20, rectHeight = 20,
+                ),
+            )
+            val src = mockk<Bitmap>(relaxed = true)
+            every { src.width } returns 200
+            every { src.height } returns 200
+            val loader = BitmapLoader { _, _ -> src }
+            val vm = EditorViewModel(repository, loader)
+            advanceUntilIdle()
+
+            vm.updateCanvasSize(Size(400f, 400f))
+            vm.loadImage(mockk(relaxed = true), mockk(relaxed = true))
+            advanceUntilIdle()
+
+            val pulseBefore = vm.state.value.rectBlinkPulse
+            vm.toggleRect()
+            val s = vm.state.value
+
+            assertTrue(s.rectVisible)
+            // (50, 50) is not the image's natural canvas-center landing, so
+            // the editor must have set a non-zero pan offset.
+            assertNotEquals(Offset.Zero, s.zoomOffset)
+            // A successful jump fires exactly one blink pulse.
+            assertEquals(pulseBefore + 1, s.rectBlinkPulse)
+        }
+
+    @Test
+    fun `toggleRect ON without sourceBitmap does not jump`() =
+        runTest(mainRule.testDispatcher) {
+            val repository = FakePreferencesRepository(
+                UserPreferences(rectX = 50f, rectY = 50f),
+            )
+            val vm = EditorViewModel(repository)
+            advanceUntilIdle()
+            vm.updateCanvasSize(Size(400f, 400f))
+
+            val pulseBefore = vm.state.value.rectBlinkPulse
+            vm.toggleRect()
+            val s = vm.state.value
+
+            assertTrue(s.rectVisible)
+            assertEquals(Offset.Zero, s.zoomOffset)
+            assertEquals(pulseBefore, s.rectBlinkPulse)
+        }
+
+    @Test
+    fun `toggleRect ON with stored position outside image does not jump`() =
+        runTest(mainRule.testDispatcher) {
+            val repository = FakePreferencesRepository(
+                UserPreferences(
+                    // 9999 is well outside a 200x200 image.
+                    rectX = 9999f, rectY = 9999f,
+                    rectWidth = 20, rectHeight = 20,
+                ),
+            )
+            val src = mockk<Bitmap>(relaxed = true)
+            every { src.width } returns 200
+            every { src.height } returns 200
+            val loader = BitmapLoader { _, _ -> src }
+            val vm = EditorViewModel(repository, loader)
+            advanceUntilIdle()
+
+            vm.updateCanvasSize(Size(400f, 400f))
+            vm.loadImage(mockk(relaxed = true), mockk(relaxed = true))
+            advanceUntilIdle()
+
+            val pulseBefore = vm.state.value.rectBlinkPulse
+            vm.toggleRect()
+            val s = vm.state.value
+
+            assertTrue(s.rectVisible)
+            assertEquals(Offset.Zero, s.zoomOffset)
+            assertEquals(pulseBefore, s.rectBlinkPulse)
+        }
+
+    @Test
+    fun `toggleRect OFF never fires a blink pulse`() =
+        runTest(mainRule.testDispatcher) {
+            val repository = FakePreferencesRepository(
+                UserPreferences(
+                    rectX = 50f, rectY = 50f,
+                    rectWidth = 20, rectHeight = 20,
+                ),
+            )
+            val src = mockk<Bitmap>(relaxed = true)
+            every { src.width } returns 200
+            every { src.height } returns 200
+            val loader = BitmapLoader { _, _ -> src }
+            val vm = EditorViewModel(repository, loader)
+            advanceUntilIdle()
+
+            vm.updateCanvasSize(Size(400f, 400f))
+            vm.loadImage(mockk(relaxed = true), mockk(relaxed = true))
+            advanceUntilIdle()
+
+            vm.toggleRect()
+            val pulseOn = vm.state.value.rectBlinkPulse
+            vm.toggleRect()
+            assertFalse(vm.state.value.rectVisible)
+            // Switching off must not bump the blink counter.
+            assertEquals(pulseOn, vm.state.value.rectBlinkPulse)
         }
 
     // ── AMOLED setters ───────────────────────────────────────────
@@ -340,5 +460,52 @@ class EditorViewModelTest {
             // assert that clearExportMessage is a no-op-safe operation.
             vm.clearExportMessage()
             assertNull(vm.state.value.exportMessage)
+        }
+
+    // ── Proposed filename / save-cancel ──────────────────────────
+
+    @Test
+    fun `clearProposedFilename releases a stuck filename after save-cancel`() =
+        runTest(mainRule.testDispatcher) {
+            // Reproduces the production flow that surfaces the bug this fix
+            // addresses: applyQuickAction populates proposedFilename to
+            // drive the SAF picker via a LaunchedEffect in EditorScreen.
+            // If the user cancels the picker, the launcher callback
+            // receives uri = null and saveTransparent — the only OTHER
+            // path that nulls the field — is never entered. Without
+            // clearProposedFilename() wired into the cancel branch the
+            // field stays sticky and a subsequent applyQuickAction
+            // producing an identical filename (counter unchanged) would
+            // not re-fire the LaunchedEffect: the FAB appears dead.
+            //
+            // fabApplyAmoled = false makes applyQuickAction skip the
+            // ImageProcessing.applyAmoledCorrection call, which would
+            // otherwise require real Bitmap pixel access unreachable on
+            // the JVM. The EditorScreen-side binding of this endpoint to
+            // the saveLauncher cancel callback is not pinned by this
+            // test — the JVM unit suite has no Compose-UI plumbing — and
+            // is verified by hand.
+            val repository = FakePreferencesRepository(
+                UserPreferences(
+                    fabApplyAmoled = false,
+                    fabPlaceRect = false,
+                ),
+            )
+            val src = mockk<Bitmap>(relaxed = true)
+            val loader = BitmapLoader { _, _ -> src }
+            val vm = EditorViewModel(repository, loader)
+            advanceUntilIdle()
+
+            vm.loadImage(mockk(relaxed = true), mockk(relaxed = true))
+            advanceUntilIdle()
+
+            vm.applyQuickAction()
+            advanceUntilIdle()
+            // Baseline: applyQuickAction actually sets the field, so the
+            // later assertNull is meaningful rather than tautological.
+            assertNotNull(vm.state.value.proposedFilename)
+
+            vm.clearProposedFilename()
+            assertNull(vm.state.value.proposedFilename)
         }
 }

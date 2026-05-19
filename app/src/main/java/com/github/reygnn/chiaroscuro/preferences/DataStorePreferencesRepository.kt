@@ -15,13 +15,14 @@ import com.github.reygnn.chiaroscuro.preferences.UserPreferences.Companion.DEFAU
 import com.github.reygnn.chiaroscuro.preferences.UserPreferences.Companion.DEFAULT_FAB_APPLY_AMOLED
 import com.github.reygnn.chiaroscuro.preferences.UserPreferences.Companion.DEFAULT_FAB_PLACE_RECT
 import com.github.reygnn.chiaroscuro.preferences.UserPreferences.Companion.DEFAULT_FILENAME_PREFIX
+import com.github.reygnn.chiaroscuro.preferences.UserPreferences.Companion.DEFAULT_FILE_COUNTER
 import com.github.reygnn.chiaroscuro.preferences.UserPreferences.Companion.DEFAULT_RECT_HEIGHT
+import com.github.reygnn.chiaroscuro.preferences.UserPreferences.Companion.DEFAULT_RECT_ROTATED
 import com.github.reygnn.chiaroscuro.preferences.UserPreferences.Companion.DEFAULT_RECT_WIDTH
 import com.github.reygnn.chiaroscuro.preferences.UserPreferences.Companion.DEFAULT_RECT_X
 import com.github.reygnn.chiaroscuro.preferences.UserPreferences.Companion.DEFAULT_RECT_Y
-import com.github.reygnn.chiaroscuro.preferences.UserPreferences.Companion.DEFAULT_SLEEVE_COUNTER
+import com.github.reygnn.chiaroscuro.preferences.UserPreferences.Companion.FILE_COUNTER_MIN
 import com.github.reygnn.chiaroscuro.preferences.UserPreferences.Companion.RECT_SIZE_MIN
-import com.github.reygnn.chiaroscuro.preferences.UserPreferences.Companion.SLEEVE_COUNTER_MIN
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.map
@@ -52,7 +53,10 @@ internal class DataStorePreferencesRepository(
                 rectY            = p[Keys.RECT_Y]            ?: DEFAULT_RECT_Y,
                 rectWidth        = p[Keys.RECT_WIDTH]        ?: DEFAULT_RECT_WIDTH,
                 rectHeight       = p[Keys.RECT_HEIGHT]       ?: DEFAULT_RECT_HEIGHT,
-                sleeveCounter    = p[Keys.SLEEVE_COUNTER]    ?: DEFAULT_SLEEVE_COUNTER,
+                rectRotated      = p[Keys.RECT_ROTATED]      ?: DEFAULT_RECT_ROTATED,
+                fileCounter      = p[Keys.FILE_COUNTER]
+                    ?: p[Keys.LEGACY_SLEEVE_COUNTER]
+                    ?: DEFAULT_FILE_COUNTER,
                 filenamePrefix   = p[Keys.FILENAME_PREFIX]   ?: DEFAULT_FILENAME_PREFIX,
                 exportBackground = p[Keys.EXPORT_BACKGROUND]
                     ?.let { name -> runCatching { ExportBackground.valueOf(name) }.getOrNull() }
@@ -95,19 +99,32 @@ internal class DataStorePreferencesRepository(
         dataStore.edit { it[Keys.RECT_HEIGHT] = value.coerceAtLeast(RECT_SIZE_MIN) }
     }
 
+    override suspend fun setRectRotated(enabled: Boolean) {
+        dataStore.edit { it[Keys.RECT_ROTATED] = enabled }
+    }
+
     override suspend fun setCounter(value: Int) {
-        dataStore.edit { it[Keys.SLEEVE_COUNTER] = value.coerceAtLeast(SLEEVE_COUNTER_MIN) }
+        dataStore.edit {
+            it[Keys.FILE_COUNTER] = value.coerceAtLeast(FILE_COUNTER_MIN)
+            it.remove(Keys.LEGACY_SLEEVE_COUNTER)
+        }
     }
 
     override suspend fun incrementCounter() {
         dataStore.edit {
-            val current = it[Keys.SLEEVE_COUNTER] ?: DEFAULT_SLEEVE_COUNTER
-            it[Keys.SLEEVE_COUNTER] = current + 1
+            val current = it[Keys.FILE_COUNTER]
+                ?: it[Keys.LEGACY_SLEEVE_COUNTER]
+                ?: DEFAULT_FILE_COUNTER
+            it[Keys.FILE_COUNTER] = current + 1
+            it.remove(Keys.LEGACY_SLEEVE_COUNTER)
         }
     }
 
     override suspend fun resetCounter() {
-        dataStore.edit { it[Keys.SLEEVE_COUNTER] = SLEEVE_COUNTER_MIN }
+        dataStore.edit {
+            it[Keys.FILE_COUNTER] = FILE_COUNTER_MIN
+            it.remove(Keys.LEGACY_SLEEVE_COUNTER)
+        }
     }
 
     override suspend fun setFilenamePrefix(value: String) {
@@ -129,7 +146,18 @@ internal class DataStorePreferencesRepository(
         val RECT_Y            = floatPreferencesKey("rect_y")
         val RECT_WIDTH        = intPreferencesKey("rect_width")
         val RECT_HEIGHT       = intPreferencesKey("rect_height")
-        val SLEEVE_COUNTER    = intPreferencesKey("sleeve_counter")
+        val RECT_ROTATED      = booleanPreferencesKey("rect_rotated")
+        val FILE_COUNTER      = intPreferencesKey("file_counter")
+
+        /**
+         * Legacy key for the file counter (used pre-1.0.3, when the
+         * filename prefix default was "sleeve" and the counter shared
+         * that name). Read as a fallback so existing installs don't see
+         * their counter snap back to 1; every counter write removes it
+         * so the on-disk schema converges over time.
+         */
+        val LEGACY_SLEEVE_COUNTER = intPreferencesKey("sleeve_counter")
+
         val FILENAME_PREFIX   = stringPreferencesKey("filename_prefix")
         val EXPORT_BACKGROUND = stringPreferencesKey("export_background")
     }

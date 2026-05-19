@@ -1,7 +1,14 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
+    <!--
+        Light-mode splash. Background pulls the wallpaper-derived
+        near-white neutral so the splash blends seamlessly into the
+        Material You palette used by the Compose UI it hands off to.
+        Available since API 31; minSdk 36 makes the fallback path
+        unreachable.
+    -->
     <style name="Theme.Chiaroscuro" parent="android:Theme.Material.Light.NoActionBar">
-        <item name="android:windowSplashScreenBackground">#F5F0E8</item>
+        <item name="android:windowSplashScreenBackground">@android:color/system_neutral1_50</item>
         <item name="android:windowSplashScreenAnimatedIcon">@mipmap/ic_launcher</item>
     </style>
 </resources>
