@@ -70,6 +70,8 @@ fun EditorScreen(
                 is ExportMessage.AmoledApplied -> context.getString(R.string.msg_amoled_applied)
                 is ExportMessage.Error.CannotOpenOutputStream ->
                     context.getString(R.string.msg_err_cannot_open_output)
+                is ExportMessage.Error.CanvasNotReady ->
+                    context.getString(R.string.msg_err_canvas_not_ready)
                 is ExportMessage.Error.Generic ->
                     context.getString(R.string.msg_error, msg.message.orEmpty())
             }

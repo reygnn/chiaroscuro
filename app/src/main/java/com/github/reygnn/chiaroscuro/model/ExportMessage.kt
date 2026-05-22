@@ -30,6 +30,21 @@ sealed interface ExportMessage {
         data object CannotOpenOutputStream : Error
 
         /**
+         * The save was triggered while the watermark-cover rect is
+         * visible, but the editor canvas has not been laid out yet
+         * (canvasSize is Size.Zero). The rect's image-space origin
+         * cannot be computed without the canvas's pixel dimensions, so
+         * the export would otherwise silently drop the rect from the
+         * PNG. Surfacing the case as a typed error lets the user retry
+         * once layout has completed instead of producing a wrong file.
+         *
+         * In practice this is only reachable if the user manages to
+         * trigger save before the first onSizeChanged callback fires —
+         * an edge case left visible rather than swallowed.
+         */
+        data object CanvasNotReady : Error
+
+        /**
          * Any other failure during export. The [message] is the framework
          * exception's message string — intentionally not localized; it
          * serves as a debugging hint rather than a polished user message.

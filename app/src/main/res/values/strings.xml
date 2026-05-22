@@ -83,6 +83,7 @@
     <string name="msg_amoled_applied">✅ AMOLED correction applied</string>
     <string name="msg_error">❌ Error: %1$s</string>
     <string name="msg_err_cannot_open_output">❌ Could not open destination file</string>
+    <string name="msg_err_canvas_not_ready">❌ Editor not ready yet — try again</string>
 
     <!-- Export — default filename when no proposed filename is available -->
     <string name="export_default_filename">edited_image.png</string>

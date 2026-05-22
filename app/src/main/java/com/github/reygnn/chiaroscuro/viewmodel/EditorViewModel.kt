@@ -362,6 +362,7 @@ class EditorViewModel(
                     onFailure = { e ->
                         when (e) {
                             is CannotOpenOutputStreamException -> ExportMessage.Error.CannotOpenOutputStream
+                            is CanvasNotReadyException -> ExportMessage.Error.CanvasNotReady
                             else -> ExportMessage.Error.Generic(e.message)
                         }
                     },
@@ -423,9 +424,15 @@ class EditorViewModel(
         s: EditorState,
         background: ExportBackground,
     ): RectOrigin? {
+        // The rect-export branch reads canvasSize to map the canvas-centered
+        // rect into image-space coordinates. Without a laid-out canvas the
+        // export would silently drop the rect; surface it as a typed error
+        // instead. Checked before the bitmap copy so a no-op save costs
+        // nothing.
+        if (s.rectVisible && s.canvasSize == Size.Zero) throw CanvasNotReadyException()
         val working = src.copy(Bitmap.Config.ARGB_8888, true)
         try {
-            val origin: RectOrigin? = if (s.rectVisible && s.canvasSize != Size.Zero) {
+            val origin: RectOrigin? = if (s.rectVisible) {
                 val o = ImageGeometry.computeRectOriginInImage(
                     imageWidth = working.width,
                     imageHeight = working.height,
@@ -470,6 +477,10 @@ class EditorViewModel(
      */
     private class CannotOpenOutputStreamException :
         IOException("Cannot open output stream")
+
+    /** See [ExportMessage.Error.CanvasNotReady] for the user-facing meaning. */
+    private class CanvasNotReadyException :
+        IllegalStateException("Canvas not laid out yet")
 
     private fun nextFilename(counter: Int, prefix: String): String =
         "${prefix}_${counter.toString().padStart(FILENAME_COUNTER_PAD, '0')}.png"
