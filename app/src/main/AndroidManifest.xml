@@ -1,5 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
-<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools">
     <application
         android:name=".ChiaroscuroApplication"
         android:allowBackup="false"
@@ -16,5 +17,23 @@
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
+
+        <!--
+            Explicit declaration so Robolectric-backed Compose UI tests
+            (createComposeRule(), which internally launches a
+            ComponentActivity via ActivityScenarioRule) can resolve the
+            host activity regardless of which test runner Android Studio
+            picks. The androidx.compose.ui:ui-test-manifest AAR
+            contributes the same entry via manifest merging, but
+            AS's IntelliJ-internal test runner bypasses AGP entirely
+            and reads this manifest as-is — without the AAR overlay.
+            Declaring the activity here removes that dependency on AGP
+            participation; release-build cost is one manifest entry
+            (no intent-filter, so not externally launchable).
+        -->
+        <activity
+            android:name="androidx.activity.ComponentActivity"
+            android:exported="true"
+            tools:ignore="ExportedActivity" />
     </application>
 </manifest>
