@@ -127,8 +127,9 @@ package com.github.reygnn.chiaroscuro.testing
  *      of a Robolectric sandbox (~30 s cold start, ~1 s warm)?
  *
  * Robolectric tests use @RunWith(AndroidJUnit4::class) + @Config(sdk = …)
- * and live in src/test/. Current toolchain pins Robolectric 4.15.1 /
- * SDK 35 so tests run on JDK 17. Upgrading to Robolectric 4.16+ for
- * SDK 36 parity would require JDK 21 as the test runtime.
+ * and live in src/test/. Current toolchain: Robolectric 4.16.1 on SDK 36,
+ * matching the project's compile/target/min SDK. The whole module — app
+ * bytecode and tests — runs on JDK 21 (see app/build.gradle.kts), so no
+ * JVM-version split between production and Robolectric is required.
  */
 private object TestingConventions

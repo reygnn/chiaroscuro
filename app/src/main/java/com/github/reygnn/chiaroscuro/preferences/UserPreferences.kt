@@ -36,7 +36,7 @@ data class UserPreferences(
         val DEFAULT_EXPORT_BACKGROUND      = ExportBackground.AMOLED
 
         const val AMOLED_THRESHOLD_MIN = 0
-        const val AMOLED_THRESHOLD_MAX = 50
+        const val AMOLED_THRESHOLD_MAX = 100
         const val RECT_SIZE_MIN        = 1
         const val FILE_COUNTER_MIN     = 1
     }

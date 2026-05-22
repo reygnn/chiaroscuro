@@ -30,6 +30,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.github.reygnn.chiaroscuro.R
 import com.github.reygnn.chiaroscuro.preferences.ExportBackground
+import com.github.reygnn.chiaroscuro.preferences.UserPreferences
 import com.github.reygnn.chiaroscuro.ui.components.AppIcons
 import com.github.reygnn.chiaroscuro.ui.components.IntSliderRow
 import com.github.reygnn.chiaroscuro.ui.components.IntTextFieldRow
@@ -78,7 +79,7 @@ fun PreferencesScreen(
             IntSliderRow(
                 label = stringResource(R.string.pref_amoled_threshold),
                 value = prefs.amoledThreshold,
-                valueRange = 0..50,
+                valueRange = UserPreferences.AMOLED_THRESHOLD_MIN..UserPreferences.AMOLED_THRESHOLD_MAX,
                 onValueChange = vm::setAmoledThreshold,
                 labelStyle = MaterialTheme.typography.bodyMedium,
                 labelWidth = 80.dp,

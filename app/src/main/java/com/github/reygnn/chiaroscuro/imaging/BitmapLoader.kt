@@ -48,6 +48,15 @@ fun interface BitmapLoader {
  * (i.e. when a copy was actually made) to release the native buffer
  * promptly.
  *
+ * **OOM guard.** A first pass with `inJustDecodeBounds = true` reads the
+ * source's pixel dimensions without allocating any pixel buffer. If the
+ * longest edge exceeds [MAX_DECODE_EDGE_PX] the second pass uses an
+ * `inSampleSize` power-of-two large enough to bring the result back under
+ * that ceiling. This means a 16000×12000 astrophoto loads as ~8000×6000
+ * rather than triggering an OOM at full ARGB_8888 cost (~730 MB native).
+ * The ceiling is well above any phone display, so typical wallpaper input
+ * (≤ 4K) is never downsampled.
+ *
  * The IO-dispatcher hop for the decode lives here so tests can inject a
  * purely in-memory loader and stay on the test dispatcher. Other
  * IO-bound operations in the ViewModel (`applyQuickAction`,
@@ -56,11 +65,22 @@ fun interface BitmapLoader {
  * abstraction is scoped to the decode path only.
  */
 object ContentResolverBitmapLoader : BitmapLoader {
+
+    /** Longest-edge ceiling for the decoded bitmap (one ARGB_8888 px = 4 bytes). */
+    private const val MAX_DECODE_EDGE_PX = 8192
+
     override suspend fun load(context: Context, uri: Uri): Bitmap? =
         withContext(Dispatchers.IO) {
+            val bounds = BitmapFactory.Options().apply { inJustDecodeBounds = true }
+            context.contentResolver.openInputStream(uri)?.use { stream ->
+                BitmapFactory.decodeStream(stream, null, bounds)
+            } ?: return@withContext null
+            if (bounds.outWidth <= 0 || bounds.outHeight <= 0) return@withContext null
+
             val raw = context.contentResolver.openInputStream(uri)?.use { stream ->
                 val options = BitmapFactory.Options().apply {
                     inPreferredConfig = Bitmap.Config.ARGB_8888
+                    inSampleSize = computeInSampleSize(bounds.outWidth, bounds.outHeight)
                 }
                 BitmapFactory.decodeStream(stream, null, options)
             } ?: return@withContext null
@@ -71,4 +91,12 @@ object ContentResolverBitmapLoader : BitmapLoader {
                 raw.copy(Bitmap.Config.ARGB_8888, true).also { raw.recycle() }
             }
         }
+
+    private fun computeInSampleSize(width: Int, height: Int): Int {
+        var sample = 1
+        while (maxOf(width, height) / sample > MAX_DECODE_EDGE_PX) {
+            sample *= 2
+        }
+        return sample
+    }
 }

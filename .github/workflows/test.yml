@@ -1,4 +1,4 @@
-name: Unit tests
+name: CI
 
 on:
   push:
@@ -7,8 +7,8 @@ on:
     branches: [main]
 
 jobs:
-  test:
-    name: JVM unit tests
+  build:
+    name: Tests, lint, release build
     runs-on: ubuntu-latest
 
     steps:
@@ -23,11 +23,13 @@ jobs:
 
       # gradle-wrapper.jar is intentionally absent from this repo (see
       # feedback_chiaroscuro_gradle_wrapper memory). Instead of ./gradlew we
-      # install Gradle 8.13 explicitly and invoke `gradle` directly.
+      # install Gradle 8.13 explicitly and invoke `gradle` directly. The
+      # setup-gradle action also wires up the build cache for us.
       - name: Set up Gradle 8.13
         uses: gradle/actions/setup-gradle@v4
         with:
           gradle-version: '8.13'
+          cache-read-only: ${{ github.ref != 'refs/heads/main' }}
 
       # AGP needs platform-36 (Android 16, the project's compile/target/min SDK).
       # The runner image ships several Android platforms but not necessarily 36,
@@ -39,8 +41,11 @@ jobs:
             platforms;android-36
             build-tools;36.0.0
 
-      - name: Run unit tests
-        run: gradle :app:testDebugUnitTest --stacktrace
+      # One Gradle invocation builds all three targets, reusing configuration
+      # and incremental task outputs. assembleRelease exercises R8/ProGuard so
+      # shrinker/rule breakage surfaces in CI instead of only at release time.
+      - name: Run tests, lint, and release build
+        run: gradle :app:testDebugUnitTest :app:lintDebug :app:assembleRelease --stacktrace
 
       - name: Upload test results
         if: always()
@@ -48,3 +53,10 @@ jobs:
         with:
           name: test-results
           path: app/build/test-results/testDebugUnitTest/
+
+      - name: Upload lint report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: lint-report
+          path: app/build/reports/lint-results-debug.*

@@ -20,12 +20,11 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
+import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.contentDescription
@@ -34,6 +33,7 @@ import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import com.github.reygnn.chiaroscuro.R
 import com.github.reygnn.chiaroscuro.model.EditorState
+import com.github.reygnn.chiaroscuro.preferences.UserPreferences
 import java.util.Locale
 import kotlin.math.roundToInt
 
@@ -63,11 +63,15 @@ fun CommandsPanel(
     onClose: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    var offset by remember { mutableStateOf(Offset.Zero) }
+    // Two floats instead of an Offset value because Offset is not Saveable.
+    // Surviving rotation is the point here — a `remember { Offset.Zero }`
+    // snapped the panel back to centre on every config change.
+    var offsetX by rememberSaveable { mutableFloatStateOf(0f) }
+    var offsetY by rememberSaveable { mutableFloatStateOf(0f) }
 
     Card(
         modifier = modifier
-            .offset { IntOffset(offset.x.roundToInt(), offset.y.roundToInt()) }
+            .offset { IntOffset(offsetX.roundToInt(), offsetY.roundToInt()) }
             .widthIn(min = 280.dp, max = 360.dp),
         elevation = CardDefaults.cardElevation(defaultElevation = 8.dp),
     ) {
@@ -83,7 +87,8 @@ fun CommandsPanel(
                     .pointerInput(Unit) {
                         detectDragGestures { change, drag ->
                             change.consume()
-                            offset += drag
+                            offsetX += drag.x
+                            offsetY += drag.y
                         }
                     },
                 horizontalArrangement = Arrangement.SpaceBetween,
@@ -153,7 +158,7 @@ fun CommandsPanel(
             IntSliderRow(
                 label = stringResource(R.string.bc_amoled_threshold),
                 value = state.amoledThreshold,
-                valueRange = 0..50,
+                valueRange = UserPreferences.AMOLED_THRESHOLD_MIN..UserPreferences.AMOLED_THRESHOLD_MAX,
                 onValueChange = onAmoledThreshold,
             )
             Row(

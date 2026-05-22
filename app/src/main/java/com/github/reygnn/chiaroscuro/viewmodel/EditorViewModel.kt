@@ -25,7 +25,9 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -46,10 +48,15 @@ class EditorViewModel(
     val analysisBitmap: StateFlow<Bitmap?> = _analysisBitmap.asStateFlow()
 
     init {
+        // Project only the prefs fields the editor mirrors into its own
+        // state, then distinct on the projection: edits to unobserved
+        // fields (file counter on every save, filename prefix, export
+        // background, FAB flags) no longer wake this collector or run
+        // the EditorState.copy(...) below.
         viewModelScope.launch {
-            repository.settings.collect { p ->
-                _state.update {
-                    it.copy(
+            repository.settings
+                .map { p ->
+                    EditorPrefsView(
                         amoledThreshold = p.amoledThreshold,
                         amoledWarmMode  = p.amoledWarmMode,
                         rectX           = p.rectX,
@@ -59,9 +66,32 @@ class EditorViewModel(
                         rectRotated     = p.rectRotated,
                     )
                 }
-            }
+                .distinctUntilChanged()
+                .collect { v ->
+                    _state.update {
+                        it.copy(
+                            amoledThreshold = v.amoledThreshold,
+                            amoledWarmMode  = v.amoledWarmMode,
+                            rectX           = v.rectX,
+                            rectY           = v.rectY,
+                            rectWidth       = v.rectWidth,
+                            rectHeight      = v.rectHeight,
+                            rectRotated     = v.rectRotated,
+                        )
+                    }
+                }
         }
     }
+
+    private data class EditorPrefsView(
+        val amoledThreshold: Int,
+        val amoledWarmMode: Boolean,
+        val rectX: Float,
+        val rectY: Float,
+        val rectWidth: Int,
+        val rectHeight: Int,
+        val rectRotated: Boolean,
+    )
 
     /**
      * Resets the editor for a fresh image and triggers an async decode.
@@ -114,9 +144,16 @@ class EditorViewModel(
                     proposedFilename  = null,
                 )
             }
-            val bitmap = bitmapLoader.load(context, uri)
-            _sourceBitmap.value = bitmap
-            _state.update { it.copy(isLoading = false) }
+            val loaded = runCatching { bitmapLoader.load(context, uri) }
+            _sourceBitmap.value = loaded.getOrNull()
+            _state.update {
+                it.copy(
+                    isLoading = false,
+                    exportMessage = loaded.exceptionOrNull()?.let { e ->
+                        ExportMessage.Error.Generic(e.message)
+                    } ?: it.exportMessage,
+                )
+            }
         }
     }
 
@@ -300,24 +337,35 @@ class EditorViewModel(
         viewModelScope.launch {
             val background = repository.settings.first().exportBackground
             val message: ExportMessage = withContext(Dispatchers.IO) {
-                runCatching {
-                    val origin = writeExport(context, uri, src, s, background)
-                    if (origin != null) {
-                        // Persist the rect's effective image-space position so
-                        // the next image load can jump straight to it. The
-                        // defaults (683/1291) are a guess; this turns every
-                        // successful export into a calibration step.
-                        repository.setRectX(origin.x.toFloat())
-                        repository.setRectY(origin.y.toFloat())
-                    }
-                    repository.incrementCounter()
-                    ExportMessage.Saved as ExportMessage
-                }.getOrElse { e ->
-                    when (e) {
-                        is CannotOpenOutputStreamException -> ExportMessage.Error.CannotOpenOutputStream
-                        else -> ExportMessage.Error.Generic(e.message)
-                    }
-                }
+                // The PNG write is the operation the user actually cares
+                // about; calibration writes (rect origin, counter bump)
+                // are bookkeeping that runs only on success. If the PNG
+                // wrote but DataStore later fails, we still report Saved
+                // — the file is on disk; a missed counter bump is the
+                // worst-case symptom, not a misleading "Error" toast.
+                runCatching { writeExport(context, uri, src, s, background) }.fold(
+                    onSuccess = { origin ->
+                        runCatching {
+                            if (origin != null) {
+                                // Persist the rect's effective image-space
+                                // position so the next image load can jump
+                                // straight to it. The defaults (683/1291)
+                                // are a guess; this turns every successful
+                                // export into a calibration step.
+                                repository.setRectX(origin.x.toFloat())
+                                repository.setRectY(origin.y.toFloat())
+                            }
+                            repository.incrementCounter()
+                        }
+                        ExportMessage.Saved
+                    },
+                    onFailure = { e ->
+                        when (e) {
+                            is CannotOpenOutputStreamException -> ExportMessage.Error.CannotOpenOutputStream
+                            else -> ExportMessage.Error.Generic(e.message)
+                        }
+                    },
+                )
             }
             _state.update {
                 it.copy(
@@ -376,29 +424,41 @@ class EditorViewModel(
         background: ExportBackground,
     ): RectOrigin? {
         val working = src.copy(Bitmap.Config.ARGB_8888, true)
-        val origin: RectOrigin? = if (s.rectVisible && s.canvasSize != Size.Zero) {
-            val o = ImageGeometry.computeRectOriginInImage(
-                imageWidth = working.width,
-                imageHeight = working.height,
-                canvasWidth = s.canvasSize.width,
-                canvasHeight = s.canvasSize.height,
-                rectWidth = s.rectWidth,
-                rectHeight = s.rectHeight,
-                zoomScale = s.zoomScale,
-                zoomOffsetX = s.zoomOffset.x,
-                zoomOffsetY = s.zoomOffset.y,
-            )
-            ImageProcessing.drawBlackRect(working, o.x, o.y, s.rectWidth, s.rectHeight, s.rectRotated)
-            o
-        } else null
-        val result = when (background) {
-            ExportBackground.AMOLED -> working
-            ExportBackground.TRANSPARENT -> ImageProcessing.blackToTransparent(working)
+        try {
+            val origin: RectOrigin? = if (s.rectVisible && s.canvasSize != Size.Zero) {
+                val o = ImageGeometry.computeRectOriginInImage(
+                    imageWidth = working.width,
+                    imageHeight = working.height,
+                    canvasWidth = s.canvasSize.width,
+                    canvasHeight = s.canvasSize.height,
+                    rectWidth = s.rectWidth,
+                    rectHeight = s.rectHeight,
+                    zoomScale = s.zoomScale,
+                    zoomOffsetX = s.zoomOffset.x,
+                    zoomOffsetY = s.zoomOffset.y,
+                )
+                ImageProcessing.drawBlackRect(working, o.x, o.y, s.rectWidth, s.rectHeight, s.rectRotated)
+                o
+            } else null
+            // result === working in AMOLED mode; a fresh bitmap in TRANSPARENT
+            // mode. The release path below recycles `result` first, then
+            // `working` only if it is a distinct allocation — otherwise we'd
+            // double-free.
+            val result = when (background) {
+                ExportBackground.AMOLED -> working
+                ExportBackground.TRANSPARENT -> ImageProcessing.blackToTransparent(working)
+            }
+            try {
+                context.contentResolver.openOutputStream(uri)?.use { out ->
+                    result.compress(Bitmap.CompressFormat.PNG, 100, out)
+                } ?: throw CannotOpenOutputStreamException()
+            } finally {
+                if (result !== working) result.recycle()
+            }
+            return origin
+        } finally {
+            working.recycle()
         }
-        context.contentResolver.openOutputStream(uri)?.use { out ->
-            result.compress(Bitmap.CompressFormat.PNG, 100, out)
-        } ?: throw CannotOpenOutputStreamException()
-        return origin
     }
 
     /**
