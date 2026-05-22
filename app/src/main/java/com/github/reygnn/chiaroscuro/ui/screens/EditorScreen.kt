@@ -63,19 +63,25 @@ fun EditorScreen(
         }
     }
 
+    // Resolve toast strings in composable scope, then hand the result
+    // to the LaunchedEffect — `context.getString(...)` inside the effect
+    // would trigger the LocalContextGetResourceValueCall lint error
+    // (LocalContext.current is not a resource-config-aware source).
+    val toastText: String? = state.exportMessage?.let { msg ->
+        when (msg) {
+            is ExportMessage.Saved -> stringResource(R.string.msg_saved)
+            is ExportMessage.AmoledApplied -> stringResource(R.string.msg_amoled_applied)
+            is ExportMessage.Error.CannotOpenOutputStream ->
+                stringResource(R.string.msg_err_cannot_open_output)
+            is ExportMessage.Error.CanvasNotReady ->
+                stringResource(R.string.msg_err_canvas_not_ready)
+            is ExportMessage.Error.Generic ->
+                stringResource(R.string.msg_error, msg.message.orEmpty())
+        }
+    }
     LaunchedEffect(state.exportMessage) {
-        state.exportMessage?.let { msg ->
-            val text = when (msg) {
-                is ExportMessage.Saved -> context.getString(R.string.msg_saved)
-                is ExportMessage.AmoledApplied -> context.getString(R.string.msg_amoled_applied)
-                is ExportMessage.Error.CannotOpenOutputStream ->
-                    context.getString(R.string.msg_err_cannot_open_output)
-                is ExportMessage.Error.CanvasNotReady ->
-                    context.getString(R.string.msg_err_canvas_not_ready)
-                is ExportMessage.Error.Generic ->
-                    context.getString(R.string.msg_error, msg.message.orEmpty())
-            }
-            Toast.makeText(context, text, Toast.LENGTH_SHORT).show()
+        toastText?.let {
+            Toast.makeText(context, it, Toast.LENGTH_SHORT).show()
             viewModel.clearExportMessage()
         }
     }
