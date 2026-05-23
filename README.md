@@ -35,8 +35,10 @@ Open the speed-dial and tap **📂 Load**. Any PNG or JPG will do.
 ### Fix AMOLED near-black pixels
 1. Tap **🔍 Analyze** in the speed-dial. Pixels that would be corrected are highlighted in red.
 2. Open the **Commands** card (☰) and adjust the **Threshold** slider if needed (default 10 is usually fine; higher = more aggressive).
-3. Flip on **Warm Tint** if the image has a warm dark tint (AI-generated stuff often does) and you want to preserve neutral shadows.
+3. Flip on **Warm Tint** to restrict the correction to pixels with a brownish/reddish cast (precisely: `R − B > 3`). With Warm Tint off, *every* near-black pixel is blackened regardless of hue. Turn it on when you have an AI-generated wallpaper whose dark areas look brown-tinted but you want neutral grey shadows and cool blue night-sky gradients to stay untouched. Turn it off for fully synthetic or already-monochrome material.
 4. Tap **✅ Apply** to commit the correction. Tap **✕ Cancel** to discard.
+
+For the full rule, ten worked pixel examples (including edge cases like `R − B = 3` vs `R − B = 4`), threshold-range guidance, and what the correction explicitly does *not* do, see [`AMOLED.md`](AMOLED.md).
 
 ### Quick Action (⚡)
 The lightning-bolt mini-FAB at the top of the speed-dial runs your preferred steps in one shot:
@@ -55,7 +57,7 @@ From the speed-dial tap **💾 Save**. Pick a location. Done. The counter increm
 
 **FAB Quick Action** — which steps the ⚡ button runs.
 
-**AMOLED Filter** — default threshold and warm-tint mode used when the editor first opens. Adjustable again per-image in the editor itself.
+**AMOLED Filter** — default threshold and warm-tint mode used when the editor first opens. Adjustable again per-image in the editor itself. See [`AMOLED.md`](AMOLED.md) for how the matching rule works.
 
 **Black Rectangle** — default cover dimensions and shape. The `X` / `Y` fields hold the sparkle position in image pixels; they're refreshed automatically every time you save, so once you've nailed the spot on one wallpaper, every later wallpaper of the same resolution gets the cover dropped straight on. **Rotate 45°** switches between a diamond (matches the 4-point Gemini sparkle) and an axis-aligned rectangle.
 
