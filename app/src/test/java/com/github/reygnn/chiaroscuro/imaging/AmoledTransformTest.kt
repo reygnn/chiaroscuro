@@ -132,6 +132,10 @@ class AmoledTransformTest {
         val result = AmoledTransform.analyze(input, threshold = 10, warmMode = false)
 
         assertEquals(2, result.nearBlackCount)
+        // Both matched pixels are neutral (R-B=0), so they count as
+        // non-warm in the breakdown.
+        assertEquals(0, result.warmNearBlackCount)
+        assertEquals(2, result.nonWarmNearBlackCount)
         assertEquals(AmoledTransform.COLOR_RED, result.pixels[0])
         assertEquals(argb(100, 100, 100), result.pixels[1])
         assertEquals(AmoledTransform.COLOR_RED, result.pixels[2])
@@ -144,6 +148,8 @@ class AmoledTransformTest {
         val result = AmoledTransform.analyze(input, threshold = 10, warmMode = false)
 
         assertEquals(0, result.nearBlackCount)
+        assertEquals(0, result.warmNearBlackCount)
+        assertEquals(0, result.nonWarmNearBlackCount)
         assertArrayEquals(input, result.pixels)
     }
 
@@ -155,6 +161,111 @@ class AmoledTransformTest {
         AmoledTransform.analyze(input, threshold = 10, warmMode = false)
 
         assertArrayEquals(before, input)
+    }
+
+    // ── analyze — warm vs non-warm breakdown ─────────────────────
+
+    @Test
+    fun `analyze breakdown separates warm from non-warm in non-warm mode`() {
+        // Three near-black pixels: one clearly warm, one cool, one neutral.
+        // All three match in non-warm mode → nearBlackCount = 3, but the
+        // breakdown splits them by (R - B) > 3.
+        val input = intArrayOf(
+            argb(8, 5, 3),     // r-b = 5  → warm
+            argb(3, 5, 8),     // r-b = -5 → non-warm (cool)
+            argb(5, 5, 5),     // r-b = 0  → non-warm (neutral)
+        )
+        val result = AmoledTransform.analyze(input, threshold = 10, warmMode = false)
+
+        assertEquals(3, result.nearBlackCount)
+        assertEquals(1, result.warmNearBlackCount)
+        assertEquals(2, result.nonWarmNearBlackCount)
+    }
+
+    @Test
+    fun `analyze in warm mode matches only warm but breakdown still counts both`() {
+        // Same population as above, but warmMode = true. The warm filter
+        // narrows the matched set to just the warm pixel, yet the
+        // breakdown counters stay independent of warmMode — they are
+        // the raw near-black classification, which is what the UI
+        // recommendation needs to know.
+        val input = intArrayOf(
+            argb(8, 5, 3),     // warm
+            argb(3, 5, 8),     // cool
+            argb(5, 5, 5),     // neutral
+        )
+        val result = AmoledTransform.analyze(input, threshold = 10, warmMode = true)
+
+        assertEquals(1, result.nearBlackCount)
+        assertEquals(1, result.warmNearBlackCount)
+        assertEquals(2, result.nonWarmNearBlackCount)
+        // Only the warm pixel is overlay-red; the other two near-blacks
+        // pass through unchanged because warmMode filtered them out.
+        assertEquals(AmoledTransform.COLOR_RED, result.pixels[0])
+        assertEquals(argb(3, 5, 8), result.pixels[1])
+        assertEquals(argb(5, 5, 5), result.pixels[2])
+    }
+
+    @Test
+    fun `analyze warm-tint boundary R minus B equals 3 counts as non-warm`() {
+        // Mirrors the isNearBlack warm-mode boundary test: (R - B) > 3
+        // is STRICT, so a delta of exactly 3 is non-warm.
+        val input = intArrayOf(argb(10, 5, 7))   // r-b = 3
+        val result = AmoledTransform.analyze(input, threshold = 10, warmMode = false)
+
+        assertEquals(1, result.nearBlackCount)
+        assertEquals(0, result.warmNearBlackCount)
+        assertEquals(1, result.nonWarmNearBlackCount)
+    }
+
+    @Test
+    fun `analyze warm-tint boundary R minus B equals 4 counts as warm`() {
+        val input = intArrayOf(argb(10, 5, 6))   // r-b = 4
+        val result = AmoledTransform.analyze(input, threshold = 10, warmMode = false)
+
+        assertEquals(1, result.nearBlackCount)
+        assertEquals(1, result.warmNearBlackCount)
+        assertEquals(0, result.nonWarmNearBlackCount)
+    }
+
+    @Test
+    fun `analyze breakdown ignores pixels above threshold even if warm`() {
+        // A bright warm pixel must not count toward the warm-near-black
+        // tally — Warm Tint only sees near-black pixels in the first place.
+        val input = intArrayOf(argb(200, 50, 0))   // very warm, very bright
+        val result = AmoledTransform.analyze(input, threshold = 10, warmMode = false)
+
+        assertEquals(0, result.nearBlackCount)
+        assertEquals(0, result.warmNearBlackCount)
+        assertEquals(0, result.nonWarmNearBlackCount)
+    }
+
+    // ── isWarmBiased ─────────────────────────────────────────────
+
+    @Test
+    fun `isWarmBiased true when red exceeds blue by more than delta`() {
+        assertTrue(AmoledTransform.isWarmBiased(argb(10, 5, 6)))   // delta = 4
+        assertTrue(AmoledTransform.isWarmBiased(argb(50, 0, 0)))    // delta = 50
+    }
+
+    @Test
+    fun `isWarmBiased false at boundary delta exactly 3`() {
+        assertFalse(AmoledTransform.isWarmBiased(argb(10, 5, 7)))   // delta = 3
+    }
+
+    @Test
+    fun `isWarmBiased false for neutral and cool pixels`() {
+        assertFalse(AmoledTransform.isWarmBiased(argb(5, 5, 5)))     // delta = 0
+        assertFalse(AmoledTransform.isWarmBiased(argb(3, 5, 8)))     // delta = -5
+    }
+
+    @Test
+    fun `isWarmBiased ignores alpha and green channel`() {
+        // Same r and b across the three pixels; green and alpha vary —
+        // result must be identical because the test reads only R and B.
+        assertTrue(AmoledTransform.isWarmBiased(argb(10, 0, 5, a = 0x00)))
+        assertTrue(AmoledTransform.isWarmBiased(argb(10, 128, 5, a = 0x7F)))
+        assertTrue(AmoledTransform.isWarmBiased(argb(10, 255, 5, a = 0xFF)))
     }
 
     // ── blackToTransparent ───────────────────────────────────────

@@ -41,6 +41,21 @@
     <string name="bc_amoled_warm_hint">Warm dark tones only (R-B&gt;3) — shadows preserved</string>
     <string name="bc_amoled_default_hint">Recommended: 5–15 to preserve shadows, 30–50 aggressive</string>
     <string name="bc_amoled_near_black_stats">🔴 %1$d pixels (%2$s%%) near-black</string>
+    <!--
+        Breakdown shown under the near-black stats after Analyze.
+        %1$d = warm near-black count (R - B > 3).
+        %2$d = non-warm near-black count (neutral grays + cool blues).
+        Together these sum to the total near-black population the
+        threshold matched — Warm Tint filters this set down to %1$d.
+    -->
+    <string name="bc_amoled_breakdown">↳ %1$d warm, %2$d neutral/cool</string>
+    <!--
+        Recommendation shown only when Warm Tint is OFF and the loaded
+        image contains both warm and non-warm near-black pixels — the
+        canonical "Warm Tint would help" case. %1$d is the non-warm
+        count that switching on Warm Tint would preserve.
+    -->
+    <string name="bc_amoled_tip_enable_warm">💡 Tip: Enable Warm Tint to keep the %1$d neutral/cool pixels untouched</string>
 
     <!-- Commands panel — Load button label -->
     <string name="bc_load">📂 Load</string>

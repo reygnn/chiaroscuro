@@ -137,6 +137,8 @@ class EditorViewModel(
                     amoledWarmMode    = p.amoledWarmMode,
                     amoledPixelCount  = 0,
                     amoledPercent     = 0f,
+                    amoledWarmNearBlackCount    = 0,
+                    amoledNonWarmNearBlackCount = 0,
                     isAnalyzing       = false,
                     showAmoledOverlay = false,
                     isLoading         = true,
@@ -258,14 +260,32 @@ class EditorViewModel(
 
     fun setAmoledThreshold(value: Int) {
         _analysisBitmap.value = null
-        _state.update { it.copy(amoledThreshold = value, showAmoledOverlay = false) }
+        _state.update {
+            it.copy(
+                amoledThreshold             = value,
+                showAmoledOverlay           = false,
+                amoledPixelCount            = 0,
+                amoledPercent               = 0f,
+                amoledWarmNearBlackCount    = 0,
+                amoledNonWarmNearBlackCount = 0,
+            )
+        }
         viewModelScope.launch { repository.setAmoledThreshold(value) }
     }
 
     fun toggleAmoledWarmMode() {
         val newValue = !_state.value.amoledWarmMode
         _analysisBitmap.value = null
-        _state.update { it.copy(amoledWarmMode = newValue, showAmoledOverlay = false) }
+        _state.update {
+            it.copy(
+                amoledWarmMode              = newValue,
+                showAmoledOverlay           = false,
+                amoledPixelCount            = 0,
+                amoledPercent               = 0f,
+                amoledWarmNearBlackCount    = 0,
+                amoledNonWarmNearBlackCount = 0,
+            )
+        }
         viewModelScope.launch { repository.setAmoledWarmMode(newValue) }
     }
 
@@ -289,6 +309,8 @@ class EditorViewModel(
                     // exceed. The Long product fits any conceivable image.
                     amoledPercent     = analysis.nearBlackCount.toFloat() /
                         (src.width.toLong() * src.height) * 100f,
+                    amoledWarmNearBlackCount    = analysis.warmNearBlackCount,
+                    amoledNonWarmNearBlackCount = analysis.nonWarmNearBlackCount,
                     showAmoledOverlay = true,
                 )
             }
@@ -314,6 +336,8 @@ class EditorViewModel(
                     showAmoledOverlay = false,
                     amoledPixelCount  = 0,
                     amoledPercent     = 0f,
+                    amoledWarmNearBlackCount    = 0,
+                    amoledNonWarmNearBlackCount = 0,
                     exportMessage     = ExportMessage.AmoledApplied,
                 )
             }
@@ -327,6 +351,8 @@ class EditorViewModel(
                 showAmoledOverlay = false,
                 amoledPixelCount  = 0,
                 amoledPercent     = 0f,
+                amoledWarmNearBlackCount    = 0,
+                amoledNonWarmNearBlackCount = 0,
             )
         }
     }

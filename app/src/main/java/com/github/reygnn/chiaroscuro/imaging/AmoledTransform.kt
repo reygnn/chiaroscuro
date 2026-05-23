@@ -55,6 +55,22 @@ internal object AmoledTransform {
     }
 
     /**
+     * True iff the pixel has a warm color bias, i.e. (red - blue) strictly
+     * greater than [WARM_TINT_MIN_DELTA]. Does NOT check near-blackness —
+     * callers gate on [isNearBlack] first when they only care about warm
+     * darks.
+     *
+     * Exists so [analyze] can categorize near-black pixels as warm vs
+     * non-warm in a single pass without re-running the full near-black
+     * arithmetic.
+     */
+    fun isWarmBiased(argb: Int): Boolean {
+        val r = (argb shr 16) and 0xFF
+        val b = argb and 0xFF
+        return (r - b) > WARM_TINT_MIN_DELTA
+    }
+
+    /**
      * Returns a new pixel array where every near-black pixel is replaced
      * with [COLOR_BLACK]. Input is not mutated.
      */
@@ -69,19 +85,49 @@ internal object AmoledTransform {
     }
 
     /**
-     * Returns the analysis overlay: every near-black pixel marked red,
-     * paired with the count of marked pixels. Input is not mutated.
+     * Returns the analysis overlay (every matched pixel marked red) plus
+     * three counts that fully describe the near-black population:
+     *
+     *  - [AmoledAnalysis.nearBlackCount] — pixels that the **current**
+     *    settings (threshold + warmMode) flag and that appear red in
+     *    the overlay. Identical to what [applyCorrection] would blacken.
+     *
+     *  - [AmoledAnalysis.warmNearBlackCount] — near-black pixels with a
+     *    warm bias (`R − B > WARM_TINT_MIN_DELTA`), **independent of
+     *    warmMode**. Counted on the raw near-black classification, so
+     *    the value is meaningful whether warmMode is currently on or off.
+     *
+     *  - [AmoledAnalysis.nonWarmNearBlackCount] — near-black pixels
+     *    without a warm bias (neutral grays, cool blues), again
+     *    independent of warmMode.
+     *
+     * The two breakdown counts let the UI recommend Warm Tint based on
+     * the actual content of the loaded image: a mixed population (both
+     * counts non-zero) is the canonical case where Warm Tint protects
+     * non-warm shadows from blanket blackening.
+     *
+     * Input is not mutated.
      */
     fun analyze(pixels: IntArray, threshold: Int, warmMode: Boolean): AmoledAnalysis {
         val out = pixels.copyOf()
-        var count = 0
+        var matched = 0
+        var warm = 0
+        var nonWarm = 0
         for (i in out.indices) {
-            if (isNearBlack(out[i], threshold, warmMode)) {
+            if (!isNearBlack(out[i], threshold, warmMode = false)) continue
+            val isWarm = isWarmBiased(out[i])
+            if (isWarm) warm++ else nonWarm++
+            if (!warmMode || isWarm) {
                 out[i] = COLOR_RED
-                count++
+                matched++
             }
         }
-        return AmoledAnalysis(out, count)
+        return AmoledAnalysis(
+            pixels = out,
+            nearBlackCount = matched,
+            warmNearBlackCount = warm,
+            nonWarmNearBlackCount = nonWarm,
+        )
     }
 
     /**
@@ -98,8 +144,14 @@ internal object AmoledTransform {
     }
 }
 
-/** Return type for [AmoledTransform.analyze]: overlay array + count. */
+/**
+ * Return type for [AmoledTransform.analyze]: overlay array plus three
+ * counts that describe the near-black population. See [AmoledTransform.analyze]
+ * for the semantics of each count.
+ */
 internal class AmoledAnalysis(
     val pixels: IntArray,
     val nearBlackCount: Int,
+    val warmNearBlackCount: Int,
+    val nonWarmNearBlackCount: Int,
 )

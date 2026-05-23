@@ -42,7 +42,11 @@ internal object ImageProcessing {
         return source.copiedWith(transformed)
     }
 
-    /** Returns overlay bitmap (near-black marked red) + near-black count. Source not mutated. */
+    /**
+     * Returns overlay bitmap (matched pixels red) plus the near-black
+     * count and the warm / non-warm breakdown. See [AmoledTransform.analyze]
+     * for the precise semantics of each count. Source not mutated.
+     */
     fun analyzeAmoled(
         source: Bitmap,
         threshold: Int,
@@ -53,6 +57,8 @@ internal object ImageProcessing {
         return AmoledAnalysisBitmap(
             bitmap = source.copiedWith(analysis.pixels),
             nearBlackCount = analysis.nearBlackCount,
+            warmNearBlackCount = analysis.warmNearBlackCount,
+            nonWarmNearBlackCount = analysis.nonWarmNearBlackCount,
         )
     }
 
@@ -128,8 +134,14 @@ internal object ImageProcessing {
     }
 }
 
-/** Return type for [ImageProcessing.analyzeAmoled]: bitmap + count. */
+/**
+ * Return type for [ImageProcessing.analyzeAmoled]: overlay bitmap plus
+ * the same three counts as [AmoledAnalysis]. The Bitmap is the only
+ * Android-typed thing in the chain; the counts pass through verbatim.
+ */
 internal class AmoledAnalysisBitmap(
     val bitmap: Bitmap,
     val nearBlackCount: Int,
+    val warmNearBlackCount: Int,
+    val nonWarmNearBlackCount: Int,
 )

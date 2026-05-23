@@ -313,6 +313,8 @@ class EditorViewModelTest {
             assertFalse(s.showAmoledOverlay)
             assertEquals(0, s.amoledPixelCount)
             assertEquals(0f, s.amoledPercent)
+            assertEquals(0, s.amoledWarmNearBlackCount)
+            assertEquals(0, s.amoledNonWarmNearBlackCount)
             assertNull(vm.analysisBitmap.value)
         }
 

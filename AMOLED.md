@@ -13,9 +13,10 @@ For general usage see `README.md`. For architecture see `TECHNICAL.md`.
 3. [Warm Tint Mode](#warm-tint-mode)
 4. [Worked examples](#worked-examples)
 5. [Analyze vs Apply](#analyze-vs-apply)
-6. [Choosing a threshold](#choosing-a-threshold)
-7. [What the correction does NOT do](#what-the-correction-does-not-do)
-8. [The exact code](#the-exact-code)
+6. [Recommendation hint after Analyze](#recommendation-hint-after-analyze)
+7. [Choosing a threshold](#choosing-a-threshold)
+8. [What the correction does NOT do](#what-the-correction-does-not-do)
+9. [The exact code](#the-exact-code)
 
 ---
 
@@ -214,6 +215,57 @@ The editor exposes two operations that both use the rules above, but differ in w
 - Does not write to disk — the image is only saved when you tap **Save**.
 
 Both operations use the exact same match criteria. What Analyze marks red is precisely what Apply would turn black.
+
+---
+
+## Recommendation hint after Analyze
+
+The Analyze command surfaces two extra lines under the near-black pixel count to help you decide whether Warm Tint Mode would benefit the loaded image:
+
+```
+🔴 8421 pixels (3.2%) near-black
+↳ 6230 warm, 2191 neutral/cool
+💡 Tip: Enable Warm Tint to keep the 2191 neutral/cool pixels untouched
+```
+
+### The breakdown line
+
+The breakdown splits the near-black pixel population by the same `R − B > 3` test that Warm Tint Mode uses internally — but counted **independently of whether Warm Tint is currently on**. So the two numbers always reflect the raw classification of the image, not the current filter.
+
+- The **warm** count is pixels that are near-black *and* have `R − B > 3`. These are the brownish/reddish darks Warm Tint is designed to catch.
+- The **neutral/cool** count is pixels that are near-black *and* fail the `R − B > 3` test. These are the neutral grays (`R ≈ G ≈ B`) and cool blue darks (`R < B`) that Warm Tint protects from blanket blackening.
+
+The two counts always sum to the total near-black population the threshold matched. In non-warm mode the matched count (`🔴 ... near-black`) equals that sum; in warm mode the matched count equals just the warm subset.
+
+### The recommendation tip
+
+The 💡 line only appears when **all three** of the following hold:
+
+- Warm Tint Mode is currently **off**, and
+- the warm count is greater than zero, and
+- the neutral/cool count is greater than zero.
+
+That combination — a mixed near-black population with Warm Tint disabled — is the canonical case where enabling Warm Tint protects real shadow detail from being blanket-blackened. In every other configuration the tip would be either obvious, wrong, or counter-productive, so the editor stays silent:
+
+| Configuration | Tip shown? | Why |
+|---|---|---|
+| Warm Tint **on**, any breakdown | No | You are already in the mode the tip would suggest. |
+| Warm Tint off, only warm pixels | No | Enabling Warm Tint would change nothing — both modes catch the same set. |
+| Warm Tint off, only neutral/cool pixels | No | Enabling Warm Tint would block every correction. That's the opposite of helpful. |
+| Warm Tint off, **both > 0** | **Yes** | Enabling Warm Tint preserves the neutral/cool subset; the warm subset stays corrected. |
+| No near-black pixels at all | No | Nothing to recommend; the whole stats block stays hidden. |
+
+### Threshold dependency
+
+The breakdown is computed at the moment you tap Analyze, against the current threshold. The warm-vs-neutral test itself (`R − B > 3`) is threshold-independent, but the **population it's measured on** shifts as the threshold moves: a pixel that's not near-black at threshold 5 may become near-black at threshold 30, at which point it joins the breakdown.
+
+Changing either the threshold slider or the Warm Tint switch clears the existing analysis (overlay and breakdown both). Re-run Analyze to refresh the recommendation.
+
+### What the recommendation does NOT do
+
+- It never toggles Warm Tint for you. The switch stays under your control; the editor only suggests.
+- It does not run on image load. You have to tap Analyze first; until then there's no breakdown to base a recommendation on.
+- It does not weigh the warm vs neutral/cool ratio beyond "both > 0". A 99/1 split fires the tip just as a 50/50 split does — because even one preserved-shadow pixel can be a fair argument for Warm Tint on a photograph, and the user sees the actual numbers and decides.
 
 ---
 

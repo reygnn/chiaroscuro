@@ -44,6 +44,18 @@ data class EditorState(
     val amoledWarmMode: Boolean = DEFAULT_AMOLED_WARM_MODE,
     val amoledPixelCount: Int = 0,
     val amoledPercent: Float = 0f,
+    /**
+     * Near-black pixels with a warm bias (R − B > 3), counted on the raw
+     * classification regardless of [amoledWarmMode]. Set by `analyzeAmoled`,
+     * reset whenever the analysis is invalidated (threshold change,
+     * warm-mode toggle, new image load).
+     *
+     * Together with [amoledNonWarmNearBlackCount] this drives the Warm
+     * Tint recommendation hint in CommandsPanel.
+     */
+    val amoledWarmNearBlackCount: Int = 0,
+    /** Near-black pixels without a warm bias (neutral grays, cool blues). */
+    val amoledNonWarmNearBlackCount: Int = 0,
     val isAnalyzing: Boolean = false,
     val showAmoledOverlay: Boolean = false,
     val isLoading: Boolean = false,
