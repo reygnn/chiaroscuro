@@ -71,10 +71,18 @@ object ContentResolverBitmapLoader : BitmapLoader {
 
     override suspend fun load(context: Context, uri: Uri): Bitmap? =
         withContext(Dispatchers.IO) {
+            // The bounds pass uses inJustDecodeBounds=true, which makes
+            // BitmapFactory.decodeStream return null by contract — it only
+            // populates bounds.outWidth/outHeight. The lambda's return value
+            // therefore carries no signal here; outWidth is the actual
+            // success indicator. Don't chain `?: return@withContext null`
+            // off `openInputStream(uri)?.use { decodeStream(...) }` — it
+            // fires on the always-null decode result and short-circuits
+            // every load, not just the unopenable-URI case.
             val bounds = BitmapFactory.Options().apply { inJustDecodeBounds = true }
-            context.contentResolver.openInputStream(uri)?.use { stream ->
-                BitmapFactory.decodeStream(stream, null, bounds)
-            } ?: return@withContext null
+            val stream = context.contentResolver.openInputStream(uri)
+                ?: return@withContext null
+            stream.use { BitmapFactory.decodeStream(it, null, bounds) }
             if (bounds.outWidth <= 0 || bounds.outHeight <= 0) return@withContext null
 
             val raw = context.contentResolver.openInputStream(uri)?.use { stream ->
