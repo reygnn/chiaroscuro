@@ -2,7 +2,6 @@ import org.jetbrains.kotlin.gradle.dsl.JvmTarget
 
 plugins {
     alias(libs.plugins.android.application)
-    alias(libs.plugins.kotlin.android)
     alias(libs.plugins.kotlin.compose)
 }
 
@@ -78,6 +77,14 @@ tasks.withType<JavaCompile>().configureEach {
             languageVersion.set(JavaLanguageVersion.of(21))
         }
     )
+}
+
+// Robolectric appends to the bootstrap classpath, which disables JVM Class
+// Data Sharing and emits a "Sharing is only supported for boot loader
+// classes" warning on every unit-test run. CDS is already inactive here, so
+// turning it off explicitly just silences the noise.
+tasks.withType<Test>().configureEach {
+    jvmArgs("-Xshare:off")
 }
 
 dependencies {

@@ -48,7 +48,7 @@ fun ImageCanvas(
         sourceBitmap
     }
 
-    val transformableState = rememberTransformableState { zoomChange, offsetChange, _ ->
+    val transformableState = rememberTransformableState { _, zoomChange, offsetChange, _ ->
         onZoomChange(zoomChange, offsetChange)
     }
 
