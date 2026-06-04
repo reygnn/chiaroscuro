@@ -20,6 +20,7 @@ import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertNull
+import org.junit.Assert.assertTrue
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -143,6 +144,80 @@ class EditorScreenSaveCancelTest {
             // counter.
             assertNull(
                 "Save-cancel must release proposedFilename via clearProposedFilename()",
+                vm.state.value.proposedFilename,
+            )
+        }
+
+    /**
+     * Regression guard for the config-change re-fire bug: the SAF save
+     * picker must be launched as a one-shot, with proposedFilename consumed
+     * at launch time — NOT held until the picker returns a result.
+     *
+     * Why it matters: MainActivity has no `configChanges` in the manifest,
+     * so a rotation / font-scale / theme change recreates it. If
+     * proposedFilename were still set when the recreated composition re-ran
+     * the launch effect, a second picker would stack (reproduced on-device:
+     * cancelling after a config change re-opens the dialog in a loop).
+     *
+     * The registry here SWALLOWS the launch — it never dispatches a result —
+     * to model "picker open, no result yet". Under the fixed code
+     * proposedFilename is nulled at launch regardless, so a subsequent
+     * recreation has nothing to re-fire. Under the old code it would remain
+     * non-null until a result arrived.
+     */
+    @Test
+    fun `quick action consumes proposedFilename at launch so recreation cannot re-fire`() =
+        runTest(mainRule.testDispatcher) {
+            val repository = FakePreferencesRepository(
+                UserPreferences(fabApplyAmoled = false, fabPlaceRect = false),
+            )
+            val src = mockk<Bitmap>(relaxed = true)
+            val loader = BitmapLoader { _, _ -> src }
+            val vm = EditorViewModel(repository, loader)
+            advanceUntilIdle()
+
+            vm.loadImage(mockk(relaxed = true), mockk(relaxed = true))
+            advanceUntilIdle()
+
+            // Registry that launches but never returns a result — the picker
+            // is "open" indefinitely, exactly the window in which a config
+            // change would otherwise re-fire the effect.
+            var launched = false
+            val swallowingRegistry = object : ActivityResultRegistry() {
+                override fun <I, O> onLaunch(
+                    requestCode: Int,
+                    contract: ActivityResultContract<I, O>,
+                    input: I,
+                    options: ActivityOptionsCompat?,
+                ) {
+                    launched = true
+                }
+            }
+            val registryOwner = object : ActivityResultRegistryOwner {
+                override val activityResultRegistry: ActivityResultRegistry = swallowingRegistry
+            }
+
+            composeTestRule.setContent {
+                CompositionLocalProvider(
+                    LocalActivityResultRegistryOwner provides registryOwner,
+                ) {
+                    EditorScreen(onOpenPreferences = {}, viewModel = vm)
+                }
+            }
+            composeTestRule.waitForIdle()
+
+            vm.applyQuickAction()
+            advanceUntilIdle()
+            composeTestRule.waitForIdle()
+            advanceUntilIdle()
+
+            // The picker was launched...
+            assertTrue("Quick action must launch the SAF picker", launched)
+            // ...and the trigger was consumed at launch — no lingering value
+            // for a recreated composition to re-fire, even though no result
+            // has come back.
+            assertNull(
+                "proposedFilename must be consumed at launch, not held until result",
                 vm.state.value.proposedFilename,
             )
         }

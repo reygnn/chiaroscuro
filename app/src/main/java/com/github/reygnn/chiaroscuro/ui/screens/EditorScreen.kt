@@ -75,6 +75,8 @@ fun EditorScreen(
                 stringResource(R.string.msg_err_cannot_open_output)
             is ExportMessage.Error.CanvasNotReady ->
                 stringResource(R.string.msg_err_canvas_not_ready)
+            is ExportMessage.Error.CannotLoadImage ->
+                stringResource(R.string.msg_err_cannot_load_image)
             is ExportMessage.Error.Generic ->
                 stringResource(R.string.msg_error, msg.message.orEmpty())
         }
@@ -87,7 +89,19 @@ fun EditorScreen(
     }
 
     LaunchedEffect(state.proposedFilename) {
-        state.proposedFilename?.let { name -> saveLauncher.launch(name) }
+        state.proposedFilename?.let { name ->
+            saveLauncher.launch(name)
+            // Consume the trigger immediately. proposedFilename is a
+            // one-shot "open the save picker" signal, not durable state —
+            // the launched picker already captured `name`. If it stayed
+            // set, a configuration-change recreation (rotation, font scale,
+            // theme) while the picker is open would rebuild this composition
+            // and re-run the effect with the still-set filename, stacking a
+            // second SAF picker that the user can't dismiss (each cancel
+            // re-fires it). Nulling here closes that window; the cancel and
+            // Saved paths also null it (now redundant, kept as defense).
+            viewModel.clearProposedFilename()
+        }
     }
 
     Scaffold { padding ->

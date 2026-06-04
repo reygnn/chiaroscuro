@@ -1,5 +1,7 @@
 package com.github.reygnn.chiaroscuro.preferences
 
+import androidx.datastore.core.DataStore
+import androidx.datastore.preferences.core.Preferences
 import app.cash.turbine.test
 import com.github.reygnn.chiaroscuro.preferences.UserPreferences.Companion.AMOLED_THRESHOLD_MAX
 import com.github.reygnn.chiaroscuro.preferences.UserPreferences.Companion.AMOLED_THRESHOLD_MIN
@@ -7,8 +9,11 @@ import com.github.reygnn.chiaroscuro.preferences.UserPreferences.Companion.DEFAU
 import com.github.reygnn.chiaroscuro.preferences.UserPreferences.Companion.FILE_COUNTER_MIN
 import com.github.reygnn.chiaroscuro.preferences.UserPreferences.Companion.RECT_SIZE_MIN
 import com.github.reygnn.chiaroscuro.testing.MainDispatcherRule
+import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.test.runTest
+import java.io.IOException
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Before
@@ -79,6 +84,24 @@ class DataStorePreferencesRepositoryTest {
             cancelAndIgnoreRemainingEvents()
         }
     }
+
+    @Test
+    fun `settings falls back to defaults when the DataStore throws IOException`() =
+        runTest(mainRule.testDispatcher) {
+            // A corrupt/unreadable backing file makes DataStore.data throw an
+            // IOException down the Flow. The repository must catch it and emit
+            // an empty snapshot (→ all defaults) instead of propagating the
+            // crash into collectors — the guarantee its KDoc makes.
+            val corruptStore = object : DataStore<Preferences> {
+                override val data: Flow<Preferences> = flow { throw IOException("corrupt") }
+                override suspend fun updateData(
+                    transform: suspend (t: Preferences) -> Preferences,
+                ): Preferences = throw UnsupportedOperationException("not needed")
+            }
+            val repo = DataStorePreferencesRepository(corruptStore)
+
+            assertEquals(UserPreferences(), repo.settings.first())
+        }
 
     // ── Clamping ─────────────────────────────────────────────────
 

@@ -4,6 +4,7 @@ import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.booleanPreferencesKey
 import androidx.datastore.preferences.core.edit
+import androidx.datastore.preferences.core.emptyPreferences
 import androidx.datastore.preferences.core.floatPreferencesKey
 import androidx.datastore.preferences.core.intPreferencesKey
 import androidx.datastore.preferences.core.stringPreferencesKey
@@ -24,8 +25,10 @@ import com.github.reygnn.chiaroscuro.preferences.UserPreferences.Companion.DEFAU
 import com.github.reygnn.chiaroscuro.preferences.UserPreferences.Companion.FILE_COUNTER_MIN
 import com.github.reygnn.chiaroscuro.preferences.UserPreferences.Companion.RECT_SIZE_MIN
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.map
+import java.io.IOException
 
 /**
  * DataStore-backed implementation of [PreferencesRepository].
@@ -43,6 +46,15 @@ internal class DataStorePreferencesRepository(
 ) : PreferencesRepository {
 
     override val settings: Flow<UserPreferences> = dataStore.data
+        // A corrupt or unreadable backing file makes DataStore throw an
+        // IOException down the data Flow (there is no corruptionHandler
+        // configured). Without this catch the exception propagates into
+        // every collector — including EditorViewModel.init — and crashes
+        // the app on launch, which is exactly what this repository's KDoc
+        // promises not to do. Fall back to an empty snapshot so the .map
+        // below yields all-defaults. Non-IO exceptions are genuine bugs
+        // and are rethrown.
+        .catch { e -> if (e is IOException) emit(emptyPreferences()) else throw e }
         .map { p ->
             UserPreferences(
                 amoledThreshold  = p[Keys.AMOLED_THRESHOLD]  ?: DEFAULT_AMOLED_THRESHOLD,

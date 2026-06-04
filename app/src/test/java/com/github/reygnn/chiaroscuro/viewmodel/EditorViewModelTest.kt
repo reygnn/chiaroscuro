@@ -5,10 +5,13 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import app.cash.turbine.test
 import com.github.reygnn.chiaroscuro.imaging.BitmapLoader
+import com.github.reygnn.chiaroscuro.model.ExportMessage
 import com.github.reygnn.chiaroscuro.preferences.UserPreferences
 import com.github.reygnn.chiaroscuro.testing.MainDispatcherRule
 import io.mockk.every
 import io.mockk.mockk
+import io.mockk.verify
+import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
@@ -16,6 +19,7 @@ import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotEquals
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertNull
+import org.junit.Assert.assertSame
 import org.junit.Assert.assertTrue
 import org.junit.Rule
 import org.junit.Test
@@ -586,5 +590,67 @@ class EditorViewModelTest {
 
             vm.clearProposedFilename()
             assertNull(vm.state.value.proposedFilename)
+        }
+
+    // ── Load image: failure feedback & stale-write guard ─────────
+
+    @Test
+    fun `loadImage surfaces CannotLoadImage when the loader returns null`() =
+        runTest(mainRule.testDispatcher) {
+            // The production loader returns null (without throwing) for an
+            // unopenable URI / zero-bounds / failed decode. That path must
+            // produce a typed error, not a silent blank canvas.
+            val repository = FakePreferencesRepository()
+            val loader = BitmapLoader { _, _ -> null }
+            val vm = EditorViewModel(repository, loader)
+            advanceUntilIdle()
+
+            vm.loadImage(mockk(relaxed = true), mockk(relaxed = true))
+            advanceUntilIdle()
+
+            val s = vm.state.value
+            assertNull(vm.sourceBitmap.value)
+            assertFalse(s.isLoading)
+            assertTrue(s.exportMessage is ExportMessage.Error.CannotLoadImage)
+        }
+
+    @Test
+    fun `loadImage discards a stale decode when a newer load started`() =
+        runTest(mainRule.testDispatcher) {
+            // First decode parks on a gate while a second load runs to
+            // completion. When the first finally resolves, its now-stale
+            // result must be dropped (and recycled) rather than clobbering
+            // the newer image.
+            val repository = FakePreferencesRepository()
+            val gate = CompletableDeferred<Unit>()
+            val first = mockk<Bitmap>(relaxed = true)
+            val second = mockk<Bitmap>(relaxed = true)
+            var call = 0
+            val loader = BitmapLoader { _, _ ->
+                call++
+                if (call == 1) {
+                    gate.await()
+                    first
+                } else {
+                    second
+                }
+            }
+            val vm = EditorViewModel(repository, loader)
+            advanceUntilIdle()
+
+            vm.loadImage(mockk(relaxed = true), mockk(relaxed = true)) // gen 1, parks on gate
+            advanceUntilIdle()
+            vm.loadImage(mockk(relaxed = true), mockk(relaxed = true)) // gen 2, completes
+            advanceUntilIdle()
+
+            // Second image is live before the first even resolves.
+            assertSame(second, vm.sourceBitmap.value)
+
+            gate.complete(Unit) // release the stale first decode
+            advanceUntilIdle()
+
+            // First result discarded + recycled; second still live.
+            assertSame(second, vm.sourceBitmap.value)
+            verify { first.recycle() }
         }
 }

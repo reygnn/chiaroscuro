@@ -45,6 +45,18 @@ sealed interface ExportMessage {
         data object CanvasNotReady : Error
 
         /**
+         * The selected image could not be decoded into a usable bitmap.
+         *
+         * Distinct from [Generic]: the [BitmapLoader] returns `null` —
+         * without throwing — when the URI cannot be opened, the bounds
+         * pass reports a zero-size image, or the decode yields no bitmap
+         * (corrupt/unsupported file). That `null`-without-exception path
+         * carries no framework message to forward, so it gets its own
+         * localized sentinel instead of a blank canvas with no feedback.
+         */
+        data object CannotLoadImage : Error
+
+        /**
          * Any other failure during export. The [message] is the framework
          * exception's message string — intentionally not localized; it
          * serves as a debugging hint rather than a polished user message.

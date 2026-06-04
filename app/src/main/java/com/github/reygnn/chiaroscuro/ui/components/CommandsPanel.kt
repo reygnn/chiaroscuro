@@ -128,17 +128,22 @@ fun CommandsPanel(
                     style = MaterialTheme.typography.labelMedium,
                 )
                 val pxSuffix = stringResource(R.string.pref_rect_suffix_px)
+                // Floor must match the persisted bound (RECT_SIZE_MIN) the
+                // repository clamps to and the Preferences text fields allow;
+                // a hard-coded 10 here would pin a smaller stored value to 10
+                // and silently bump it up on the first slider touch. 2000 is a
+                // UI-only practical ceiling (the persisted value has no max).
                 IntSliderRow(
                     label = stringResource(R.string.bc_rect_width),
                     value = state.rectWidth,
-                    valueRange = 10..2000,
+                    valueRange = UserPreferences.RECT_SIZE_MIN..2000,
                     onValueChange = onRectWidthChange,
                     valueSuffix = pxSuffix,
                 )
                 IntSliderRow(
                     label = stringResource(R.string.bc_rect_height),
                     value = state.rectHeight,
-                    valueRange = 10..2000,
+                    valueRange = UserPreferences.RECT_SIZE_MIN..2000,
                     onValueChange = onRectHeightChange,
                     valueSuffix = pxSuffix,
                 )

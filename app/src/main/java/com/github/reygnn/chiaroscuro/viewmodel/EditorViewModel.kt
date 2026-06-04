@@ -41,11 +41,34 @@ class EditorViewModel(
     private val _state = MutableStateFlow(EditorState())
     val state: StateFlow<EditorState> = _state.asStateFlow()
 
+    // Bitmap lifecycle note: bitmaps that have already been *published* to
+    // these StateFlows (and are therefore being drawn by ImageCanvas) are
+    // deliberately NOT recycled at the moment they are replaced. A
+    // recomposition may still be mid-draw on the outgoing bitmap, and
+    // recycling it under the draw would crash ("trying to use a recycled
+    // bitmap"). Their native memory is reclaimed by the platform GC instead.
+    // Bitmaps that were created but never published (a stale IO result
+    // discarded by the loadGeneration guard) ARE recycled immediately — see
+    // the guarded `recycle()` calls below — since nothing can be drawing them.
     private val _sourceBitmap = MutableStateFlow<Bitmap?>(null)
     val sourceBitmap: StateFlow<Bitmap?> = _sourceBitmap.asStateFlow()
 
     private val _analysisBitmap = MutableStateFlow<Bitmap?>(null)
     val analysisBitmap: StateFlow<Bitmap?> = _analysisBitmap.asStateFlow()
+
+    /**
+     * Monotonic load counter, bumped on every [loadImage] call (on Main,
+     * before the decode coroutine launches).
+     *
+     * Guards against stale-write races: a long-running IO job
+     * ([applyAmoledCorrection], [analyzeAmoled], [applyQuickAction], or a
+     * slow decode) captures the generation at entry and, on resume,
+     * discards its result if the user has since loaded a different image.
+     * Without this, a correction of the *old* image could clobber the
+     * freshly loaded new one — wrong bitmap shown/saved plus a misleading
+     * "applied" toast.
+     */
+    private var loadGeneration = 0
 
     init {
         // Project only the prefs fields the editor mirrors into its own
@@ -117,6 +140,7 @@ class EditorViewModel(
      * to reset, omit it to inherit "preserved".
      */
     fun loadImage(context: Context, uri: Uri) {
+        val generation = ++loadGeneration
         viewModelScope.launch {
             val p = repository.settings.first()
             _sourceBitmap.value = null
@@ -147,13 +171,30 @@ class EditorViewModel(
                 )
             }
             val loaded = runCatching { bitmapLoader.load(context, uri) }
-            _sourceBitmap.value = loaded.getOrNull()
+            // A newer loadImage started while we were decoding — discard
+            // this result so it can't clobber the newer image's state, and
+            // recycle the orphaned bitmap (it was never published).
+            if (generation != loadGeneration) {
+                loaded.getOrNull()?.recycle()
+                return@launch
+            }
+            val bitmap = loaded.getOrNull()
+            _sourceBitmap.value = bitmap
             _state.update {
                 it.copy(
                     isLoading = false,
-                    exportMessage = loaded.exceptionOrNull()?.let { e ->
-                        ExportMessage.Error.Generic(e.message)
-                    } ?: it.exportMessage,
+                    exportMessage = when {
+                        // Threw (e.g. IOException opening the stream): forward
+                        // the framework message as a debugging hint.
+                        loaded.isFailure ->
+                            ExportMessage.Error.Generic(loaded.exceptionOrNull()?.message)
+                        // Returned null without throwing (unopenable URI,
+                        // zero-bounds, or a failed decode). No message to
+                        // forward — surface the typed, localized error rather
+                        // than leaving a blank canvas with no feedback.
+                        bitmap == null -> ExportMessage.Error.CannotLoadImage
+                        else -> it.exportMessage
+                    },
                 )
             }
         }
@@ -253,15 +294,33 @@ class EditorViewModel(
     }
 
     fun applyQuickAction() {
+        if (_state.value.isAnalyzing) return
         val src = _sourceBitmap.value ?: return
+        val generation = loadGeneration
         viewModelScope.launch {
             val p = repository.settings.first()
             _state.update { it.copy(isAnalyzing = true) }
             var current = src
             if (p.fabApplyAmoled) {
-                current = withContext(Dispatchers.IO) {
-                    ImageProcessing.applyAmoledCorrection(current, p.amoledThreshold, p.amoledWarmMode)
+                current = try {
+                    withContext(Dispatchers.IO) {
+                        ImageProcessing.applyAmoledCorrection(current, p.amoledThreshold, p.amoledWarmMode)
+                    }
+                } catch (e: Exception) {
+                    // Clear the spinner and surface the failure instead of
+                    // leaving isAnalyzing stuck true forever (dead FAB).
+                    _state.update {
+                        it.copy(isAnalyzing = false, exportMessage = ExportMessage.Error.Generic(e.message))
+                    }
+                    return@launch
                 }
+            }
+            // A newer image was loaded mid-correction — this result is stale.
+            // Recycle the freshly created bitmap (never published); leave the
+            // original `src` alone (the loader/new load owns its lifecycle).
+            if (generation != loadGeneration) {
+                if (current !== src) current.recycle()
+                return@launch
             }
             _sourceBitmap.value = current
             _state.update {
@@ -313,13 +372,28 @@ class EditorViewModel(
     }
 
     fun analyzeAmoled() {
+        if (_state.value.isAnalyzing) return
         val src = _sourceBitmap.value ?: return
         val threshold = _state.value.amoledThreshold
         val warmMode = _state.value.amoledWarmMode
+        val generation = loadGeneration
         viewModelScope.launch {
             _state.update { it.copy(isAnalyzing = true) }
-            val analysis = withContext(Dispatchers.IO) {
-                ImageProcessing.analyzeAmoled(src, threshold, warmMode)
+            val analysis = try {
+                withContext(Dispatchers.IO) {
+                    ImageProcessing.analyzeAmoled(src, threshold, warmMode)
+                }
+            } catch (e: Exception) {
+                _state.update {
+                    it.copy(isAnalyzing = false, exportMessage = ExportMessage.Error.Generic(e.message))
+                }
+                return@launch
+            }
+            // A newer image was loaded mid-analysis — discard the overlay
+            // and recycle it (never published).
+            if (generation != loadGeneration) {
+                analysis.bitmap.recycle()
+                return@launch
             }
             _analysisBitmap.value = analysis.bitmap
             _state.update {
@@ -341,15 +415,30 @@ class EditorViewModel(
     }
 
     fun applyAmoledCorrection() {
+        if (_state.value.isAnalyzing) return
         val src = _sourceBitmap.value ?: return
+        val generation = loadGeneration
         viewModelScope.launch {
             _state.update { it.copy(isAnalyzing = true) }
-            val corrected = withContext(Dispatchers.IO) {
-                ImageProcessing.applyAmoledCorrection(
-                    src,
-                    _state.value.amoledThreshold,
-                    _state.value.amoledWarmMode,
-                )
+            val corrected = try {
+                withContext(Dispatchers.IO) {
+                    ImageProcessing.applyAmoledCorrection(
+                        src,
+                        _state.value.amoledThreshold,
+                        _state.value.amoledWarmMode,
+                    )
+                }
+            } catch (e: Exception) {
+                _state.update {
+                    it.copy(isAnalyzing = false, exportMessage = ExportMessage.Error.Generic(e.message))
+                }
+                return@launch
+            }
+            // A newer image was loaded mid-correction — discard and recycle
+            // the orphaned result (never published).
+            if (generation != loadGeneration) {
+                corrected.recycle()
+                return@launch
             }
             _sourceBitmap.value = corrected
             _analysisBitmap.value = null
