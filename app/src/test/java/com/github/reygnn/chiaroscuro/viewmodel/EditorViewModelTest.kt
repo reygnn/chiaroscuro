@@ -265,6 +265,83 @@ class EditorViewModelTest {
             assertEquals(pulseOn, vm.state.value.rectBlinkPulse)
         }
 
+    // ── applyQuickAction: rect placement + position-jump ─────────
+    //
+    // Regression guard: the ⚡ Quick Action must place the rect AND jump
+    // the image onto the stored sparkle position, exactly like the manual
+    // ◇ toggle. An earlier version set rectVisible = true directly and
+    // skipped the jump, so the rect appeared but the image never moved.
+    //
+    // fabApplyAmoled = false keeps applyQuickAction off the
+    // ImageProcessing.applyAmoledCorrection path, which needs real Bitmap
+    // pixels unreachable on the JVM (see the class-level scope note).
+
+    @Test
+    fun `applyQuickAction with fabPlaceRect jumps onto stored position`() =
+        runTest(mainRule.testDispatcher) {
+            val repository = FakePreferencesRepository(
+                UserPreferences(
+                    fabApplyAmoled = false,
+                    fabPlaceRect = true,
+                    rectX = 50f, rectY = 50f,
+                    rectWidth = 20, rectHeight = 20,
+                ),
+            )
+            val src = mockk<Bitmap>(relaxed = true)
+            every { src.width } returns 200
+            every { src.height } returns 200
+            val loader = BitmapLoader { _, _ -> src }
+            val vm = EditorViewModel(repository, loader)
+            advanceUntilIdle()
+
+            vm.updateCanvasSize(Size(400f, 400f))
+            vm.loadImage(mockk(relaxed = true), mockk(relaxed = true))
+            advanceUntilIdle()
+
+            val pulseBefore = vm.state.value.rectBlinkPulse
+            vm.applyQuickAction()
+            advanceUntilIdle()
+            val s = vm.state.value
+
+            assertTrue(s.rectVisible)
+            // (50, 50) is not the image's natural canvas-center landing, so
+            // a non-zero pan offset proves the image was shifted onto it.
+            assertNotEquals(Offset.Zero, s.zoomOffset)
+            assertEquals(pulseBefore + 1, s.rectBlinkPulse)
+        }
+
+    @Test
+    fun `applyQuickAction with fabPlaceRect off leaves rect hidden and pan untouched`() =
+        runTest(mainRule.testDispatcher) {
+            val repository = FakePreferencesRepository(
+                UserPreferences(
+                    fabApplyAmoled = false,
+                    fabPlaceRect = false,
+                    rectX = 50f, rectY = 50f,
+                    rectWidth = 20, rectHeight = 20,
+                ),
+            )
+            val src = mockk<Bitmap>(relaxed = true)
+            every { src.width } returns 200
+            every { src.height } returns 200
+            val loader = BitmapLoader { _, _ -> src }
+            val vm = EditorViewModel(repository, loader)
+            advanceUntilIdle()
+
+            vm.updateCanvasSize(Size(400f, 400f))
+            vm.loadImage(mockk(relaxed = true), mockk(relaxed = true))
+            advanceUntilIdle()
+
+            val pulseBefore = vm.state.value.rectBlinkPulse
+            vm.applyQuickAction()
+            advanceUntilIdle()
+            val s = vm.state.value
+
+            assertFalse(s.rectVisible)
+            assertEquals(Offset.Zero, s.zoomOffset)
+            assertEquals(pulseBefore, s.rectBlinkPulse)
+        }
+
     // ── AMOLED setters ───────────────────────────────────────────
 
     @Test

@@ -187,38 +187,56 @@ class EditorViewModel(
      */
     fun toggleRect() {
         _state.update { current ->
-            if (current.rectVisible) return@update current.copy(rectVisible = false)
-
-            // Turning ON: try to jump onto stored (rectX, rectY).
-            val src = _sourceBitmap.value
-                ?: return@update current.copy(rectVisible = true)
-            val canvas = current.canvasSize
-            if (canvas == Size.Zero) return@update current.copy(rectVisible = true)
-
-            val tx = current.rectX
-            val ty = current.rectY
-            val inBounds = tx >= 0f && ty >= 0f &&
-                tx + current.rectWidth <= src.width &&
-                ty + current.rectHeight <= src.height
-            if (!inBounds) return@update current.copy(rectVisible = true)
-
-            val offset = ImageGeometry.computeZoomOffsetForRectAt(
-                imageWidth = src.width,
-                imageHeight = src.height,
-                canvasWidth = canvas.width,
-                canvasHeight = canvas.height,
-                rectWidth = current.rectWidth,
-                rectHeight = current.rectHeight,
-                targetImageX = tx,
-                targetImageY = ty,
-                zoomScale = current.zoomScale,
-            )
-            current.copy(
-                rectVisible = true,
-                zoomOffset = Offset(offset.x, offset.y),
-                rectBlinkPulse = current.rectBlinkPulse + 1,
-            )
+            if (current.rectVisible) current.copy(rectVisible = false)
+            else current.withRectPlaced()
         }
+    }
+
+    /**
+     * Turns the cover-up rect ON, jumping the canvas-pan so the rect lands
+     * directly over the persisted sparkle position (rectX/rectY) when that
+     * position lies fully inside the loaded source image — and fires a blink
+     * pulse so the user spots the rect after the jump.
+     *
+     * If a source image is missing, the canvas size is unknown, or the
+     * stored position falls outside the image, the rect appears at its
+     * default canvas-center position (no pan, no pulse) and the user pans
+     * manually.
+     *
+     * Shared by [toggleRect] (manual ◇ toggle) and [applyQuickAction] (the
+     * ⚡ one-tap action) so both place the rect identically. Keeping this in
+     * one place is the whole point: an earlier copy in [applyQuickAction]
+     * set `rectVisible = true` directly and skipped the jump, so the Quick
+     * Action placed the rect but never moved the image onto the sparkle.
+     */
+    private fun EditorState.withRectPlaced(): EditorState {
+        val src = _sourceBitmap.value ?: return copy(rectVisible = true)
+        val canvas = canvasSize
+        if (canvas == Size.Zero) return copy(rectVisible = true)
+
+        val tx = rectX
+        val ty = rectY
+        val inBounds = tx >= 0f && ty >= 0f &&
+            tx + rectWidth <= src.width &&
+            ty + rectHeight <= src.height
+        if (!inBounds) return copy(rectVisible = true)
+
+        val offset = ImageGeometry.computeZoomOffsetForRectAt(
+            imageWidth = src.width,
+            imageHeight = src.height,
+            canvasWidth = canvas.width,
+            canvasHeight = canvas.height,
+            rectWidth = rectWidth,
+            rectHeight = rectHeight,
+            targetImageX = tx,
+            targetImageY = ty,
+            zoomScale = zoomScale,
+        )
+        return copy(
+            rectVisible = true,
+            zoomOffset = Offset(offset.x, offset.y),
+            rectBlinkPulse = rectBlinkPulse + 1,
+        )
     }
 
     fun updateZoom(scaleChange: Float, offsetChange: Offset) {
@@ -247,13 +265,18 @@ class EditorViewModel(
             }
             _sourceBitmap.value = current
             _state.update {
-                it.copy(
+                // Apply the rect dimensions first so the jump's bounds check
+                // and offset math (in withRectPlaced) use the prefs values.
+                val base = it.copy(
                     isAnalyzing      = false,
-                    rectVisible      = p.fabPlaceRect,
                     rectWidth        = p.rectWidth,
                     rectHeight       = p.rectHeight,
                     proposedFilename = nextFilename(p.fileCounter, p.filenamePrefix),
                 )
+                // fabPlaceRect ON: place the rect AND jump the image onto the
+                // stored sparkle position, exactly like the manual toggle.
+                // OFF: leave the rect hidden and the pan untouched.
+                if (p.fabPlaceRect) base.withRectPlaced() else base.copy(rectVisible = false)
             }
         }
     }
