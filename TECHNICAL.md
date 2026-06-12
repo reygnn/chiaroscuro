@@ -278,7 +278,7 @@ All keys, defaults, and bounds are declared on `UserPreferences.Companion` as co
 ```
 Key                  Type      Default     Bounds              Description
 ──────────────────────────────────────────────────────────────────────────────────
-amoled_threshold     Int       50          [0, 100]            AMOLED filter threshold
+amoled_threshold     Int       50          [0, 150]            AMOLED filter threshold
 amoled_warm_mode     Boolean   false       —                   Warm tint mode (per-channel rule only)
 amoled_perceptual    Boolean   true        —                   Luminance detection (default); ignores warm mode
 fab_apply_amoled     Boolean   true        —                   FAB: apply AMOLED step

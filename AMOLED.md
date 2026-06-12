@@ -320,7 +320,7 @@ Changing either the threshold slider or the Warm Tint switch clears the existing
 
 ## Choosing a threshold
 
-The threshold is an integer from 0 to 50, exposed as a slider.
+The threshold is an integer from 0 to 150, exposed as a slider.
 
 Rules of thumb based on what the pixel value space looks like:
 
@@ -329,6 +329,7 @@ Rules of thumb based on what the pixel value space looks like:
 - **5 to 15** — Recommended for most content. Removes low-value dark noise without flattening intentional shadow detail. Combined with Warm Tint, this is the safe range for AI wallpapers with warm casts.
 - **16 to 30** — Aggressive. Will start catching genuinely dark but intentional shadows in photographs (hair, dark clothing, shaded surfaces). Fine for abstract or heavily stylized wallpapers, risky for photos.
 - **31 to 50** — Very aggressive. Treats anything dark as waste. Appropriate only when you want a fully AMOLED-friendly image and accept losing all shadow gradation.
+- **51 to 150** — Extreme. Well beyond "dark": at these values the cutoff reaches into clearly-visible mid-tones (in Perceptual mode, luma ≤ 150 is past mid-grey), so large parts of an image can collapse to black. Useful only for deliberately crushing a near-monochrome source to pure AMOLED black; not a general-purpose range.
 
 The **higher** the threshold, the **more** pixels are matched. There is no adaptive behavior — the threshold is a hard cutoff.
 
