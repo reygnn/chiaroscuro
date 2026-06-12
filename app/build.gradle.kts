@@ -13,8 +13,8 @@ android {
         applicationId = "com.github.reygnn.chiaroscuro"
         minSdk = 36
         targetSdk = 36
-        versionCode = 28
-        versionName = "0.52.7"
+        versionCode = 29
+        versionName = "0.52.8"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
