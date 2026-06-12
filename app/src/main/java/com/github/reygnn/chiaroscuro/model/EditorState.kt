@@ -4,6 +4,7 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import com.github.reygnn.chiaroscuro.preferences.UserPreferences.Companion.DEFAULT_AMOLED_THRESHOLD
 import com.github.reygnn.chiaroscuro.preferences.UserPreferences.Companion.DEFAULT_AMOLED_WARM_MODE
+import com.github.reygnn.chiaroscuro.preferences.UserPreferences.Companion.DEFAULT_AMOLED_PERCEPTUAL
 import com.github.reygnn.chiaroscuro.preferences.UserPreferences.Companion.DEFAULT_RECT_HEIGHT
 import com.github.reygnn.chiaroscuro.preferences.UserPreferences.Companion.DEFAULT_RECT_ROTATED
 import com.github.reygnn.chiaroscuro.preferences.UserPreferences.Companion.DEFAULT_RECT_WIDTH
@@ -42,6 +43,14 @@ data class EditorState(
     val canvasSize: Size = Size.Zero,
     val amoledThreshold: Int = DEFAULT_AMOLED_THRESHOLD,
     val amoledWarmMode: Boolean = DEFAULT_AMOLED_WARM_MODE,
+    /**
+     * When true, AMOLED detection uses the luminance rule (catches colored
+     * near-black too — maximum fake-AMOLED removal). When false, the
+     * hue-preserving per-channel rule. Mirrors
+     * [com.github.reygnn.chiaroscuro.preferences.UserPreferences.amoledPerceptual].
+     * Warm Tint has no effect while this is true.
+     */
+    val amoledPerceptual: Boolean = DEFAULT_AMOLED_PERCEPTUAL,
     val amoledPixelCount: Int = 0,
     val amoledPercent: Float = 0f,
     /**

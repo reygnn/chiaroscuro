@@ -17,6 +17,7 @@ interface PreferencesRepository {
 
     suspend fun setAmoledThreshold(value: Int)
     suspend fun setAmoledWarmMode(enabled: Boolean)
+    suspend fun setAmoledPerceptual(enabled: Boolean)
 
     suspend fun setFabApplyAmoled(enabled: Boolean)
     suspend fun setFabPlaceRect(enabled: Boolean)

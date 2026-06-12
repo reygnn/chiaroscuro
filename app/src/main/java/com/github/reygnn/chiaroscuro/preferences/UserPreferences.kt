@@ -10,6 +10,7 @@ package com.github.reygnn.chiaroscuro.preferences
 data class UserPreferences(
     val amoledThreshold: Int         = DEFAULT_AMOLED_THRESHOLD,
     val amoledWarmMode: Boolean      = DEFAULT_AMOLED_WARM_MODE,
+    val amoledPerceptual: Boolean    = DEFAULT_AMOLED_PERCEPTUAL,
     val fabApplyAmoled: Boolean      = DEFAULT_FAB_APPLY_AMOLED,
     val fabPlaceRect: Boolean        = DEFAULT_FAB_PLACE_RECT,
     val rectX: Float                 = DEFAULT_RECT_X,
@@ -24,6 +25,12 @@ data class UserPreferences(
     companion object {
         const val DEFAULT_AMOLED_THRESHOLD = 50
         const val DEFAULT_AMOLED_WARM_MODE = false
+
+        // Perceptual (luminance) detection is the default: it removes the
+        // colored near-black that the per-channel rule structurally misses,
+        // i.e. maximum fake-AMOLED cleanup. Set false to opt back into the
+        // hue-preserving per-channel rule.
+        const val DEFAULT_AMOLED_PERCEPTUAL = true
         const val DEFAULT_FAB_APPLY_AMOLED = true
         const val DEFAULT_FAB_PLACE_RECT   = true
         const val DEFAULT_RECT_X           = 683f

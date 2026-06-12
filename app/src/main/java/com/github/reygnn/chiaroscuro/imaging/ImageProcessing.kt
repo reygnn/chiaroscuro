@@ -36,9 +36,11 @@ internal object ImageProcessing {
         source: Bitmap,
         threshold: Int,
         warmMode: Boolean,
+        perceptual: Boolean,
     ): Bitmap {
         val pixels = source.toArgbArray()
-        val transformed = AmoledTransform.applyCorrection(pixels, threshold, warmMode)
+        val mode = if (perceptual) DetectionMode.PERCEPTUAL else DetectionMode.PER_CHANNEL
+        val transformed = AmoledTransform.applyCorrection(pixels, threshold, mode, warmMode)
         return source.copiedWith(transformed)
     }
 
@@ -51,9 +53,11 @@ internal object ImageProcessing {
         source: Bitmap,
         threshold: Int,
         warmMode: Boolean,
+        perceptual: Boolean,
     ): AmoledAnalysisBitmap {
         val pixels = source.toArgbArray()
-        val analysis = AmoledTransform.analyze(pixels, threshold, warmMode)
+        val mode = if (perceptual) DetectionMode.PERCEPTUAL else DetectionMode.PER_CHANNEL
+        val analysis = AmoledTransform.analyze(pixels, threshold, mode, warmMode)
         return AmoledAnalysisBitmap(
             bitmap = source.copiedWith(analysis.pixels),
             nearBlackCount = analysis.nearBlackCount,

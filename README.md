@@ -35,8 +35,9 @@ Open the speed-dial and tap **📂 Load**. Any PNG or JPG will do.
 ### Fix AMOLED near-black pixels
 1. Tap **🔍 Analyze** in the speed-dial. Pixels that would be corrected are highlighted in red.
 2. Open the **Commands** card (☰) and adjust the **Threshold** slider if needed (default 10 is usually fine; higher = more aggressive).
-3. Flip on **Warm Tint** to restrict the correction to pixels with a brownish/reddish cast (precisely: `R − B > 3`). With Warm Tint off, *every* near-black pixel is blackened regardless of hue. Turn it on when you have an AI-generated wallpaper whose dark areas look brown-tinted but you want neutral grey shadows and cool blue night-sky gradients to stay untouched. Turn it off for fully synthetic or already-monochrome material.
-4. Tap **✅ Apply** to commit the correction. Tap **✕ Cancel** to discard.
+3. **Perceptual (aggressive)** is on by default. It detects near-black by *perceived brightness* (luma), so it also catches colored darks — deep navy, maroon, teal — that the per-channel rule misses. This is the most thorough AMOLED cleanup, but because it ignores hue it can shift the motif in genuinely colored-but-dark regions. Turn it **off** to fall back to the hue-preserving per-channel rule (and to use Warm Tint).
+4. Flip on **Warm Tint** (per-channel mode only — the switch is disabled while Perceptual is on) to restrict the correction to pixels with a brownish/reddish cast (precisely: `R − B > 3`). With Warm Tint off, *every* near-black pixel is blackened regardless of hue. Turn it on when you have an AI-generated wallpaper whose dark areas look brown-tinted but you want neutral grey shadows and cool blue night-sky gradients to stay untouched. Turn it off for fully synthetic or already-monochrome material.
+5. Tap **✅ Apply** to commit the correction. Tap **✕ Cancel** to discard.
 
 For the full rule, ten worked pixel examples (including edge cases like `R − B = 3` vs `R − B = 4`), threshold-range guidance, and what the correction explicitly does *not* do, see [`AMOLED.md`](AMOLED.md).
 
@@ -57,7 +58,7 @@ From the speed-dial tap **💾 Save**. Pick a location. Done. The counter increm
 
 **FAB Quick Action** — which steps the ⚡ button runs.
 
-**AMOLED Filter** — default threshold and warm-tint mode used when the editor first opens. Adjustable again per-image in the editor itself. See [`AMOLED.md`](AMOLED.md) for how the matching rule works.
+**AMOLED Filter** — default threshold, detection mode (Perceptual vs per-channel), and warm-tint mode used when the editor first opens. Adjustable again per-image in the editor itself. **Perceptual detection is on by default** (maximum cleanup, hue-agnostic); see [`AMOLED.md`](AMOLED.md) for how both matching rules work and when to prefer each.
 
 **Black Rectangle** — default cover dimensions and shape. The `X` / `Y` fields hold the sparkle position in image pixels; they're refreshed automatically every time you save, so once you've nailed the spot on one wallpaper, every later wallpaper of the same resolution gets the cover dropped straight on. **Rotate 45°** switches between a diamond (matches the 4-point Gemini sparkle) and an axis-aligned rectangle.
 

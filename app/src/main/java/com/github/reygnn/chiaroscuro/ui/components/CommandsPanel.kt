@@ -60,6 +60,7 @@ fun CommandsPanel(
     onRectHeightChange: (Int) -> Unit,
     onAmoledThreshold: (Int) -> Unit,
     onToggleWarmMode: () -> Unit,
+    onTogglePerceptual: () -> Unit,
     onClose: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
@@ -171,6 +172,25 @@ fun CommandsPanel(
                 modifier = Modifier.fillMaxWidth(),
             ) {
                 Text(
+                    text = stringResource(R.string.bc_amoled_perceptual),
+                    style = MaterialTheme.typography.labelMedium,
+                    modifier = Modifier.weight(1f),
+                )
+                Switch(
+                    checked = state.amoledPerceptual,
+                    onCheckedChange = { onTogglePerceptual() },
+                )
+            }
+            Text(
+                text = stringResource(R.string.bc_amoled_perceptual_hint),
+                style = MaterialTheme.typography.labelSmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                modifier = Modifier.fillMaxWidth(),
+            ) {
+                Text(
                     text = stringResource(R.string.bc_amoled_warm_tint),
                     style = MaterialTheme.typography.labelMedium,
                     modifier = Modifier.weight(1f),
@@ -178,13 +198,17 @@ fun CommandsPanel(
                 Switch(
                     checked = state.amoledWarmMode,
                     onCheckedChange = { onToggleWarmMode() },
+                    // Warm Tint is a per-channel-rule concept; it does nothing
+                    // under the perceptual (luminance) rule, so disable it there.
+                    enabled = !state.amoledPerceptual,
                 )
             }
             Text(
-                text = if (state.amoledWarmMode)
-                    stringResource(R.string.bc_amoled_warm_hint)
-                else
-                    stringResource(R.string.bc_amoled_default_hint),
+                text = when {
+                    state.amoledPerceptual -> stringResource(R.string.bc_amoled_warm_inactive)
+                    state.amoledWarmMode -> stringResource(R.string.bc_amoled_warm_hint)
+                    else -> stringResource(R.string.bc_amoled_default_hint)
+                },
                 style = MaterialTheme.typography.labelSmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
@@ -203,35 +227,41 @@ fun CommandsPanel(
                 // current warmMode), so the line is also meaningful when
                 // Warm Tint is ON — the non-warm count then shows what
                 // Warm Tint is currently filtering OUT of the correction.
-                Text(
-                    text = stringResource(
-                        R.string.bc_amoled_breakdown,
-                        state.amoledWarmNearBlackCount,
-                        state.amoledNonWarmNearBlackCount,
-                    ),
-                    style = MaterialTheme.typography.labelSmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
-                // Recommendation hint: only fires when Warm Tint is OFF
-                // and the image has BOTH warm and non-warm near-black
-                // pixels — the canonical case where enabling Warm Tint
-                // protects real shadow detail from the blanket
-                // blackening. In all other configurations the tip would
-                // be either obvious (user already in warm mode) or
-                // wrong (no non-warm pixels to protect / no warm
-                // pixels to match), so we stay silent.
-                if (!state.amoledWarmMode &&
-                    state.amoledWarmNearBlackCount > 0 &&
-                    state.amoledNonWarmNearBlackCount > 0
-                ) {
+                //
+                // Suppressed entirely in perceptual mode: the luminance rule
+                // is hue-agnostic, so analyze reports the breakdown as 0/0
+                // and a warm-vs-neutral recommendation has no meaning.
+                if (!state.amoledPerceptual) {
                     Text(
                         text = stringResource(
-                            R.string.bc_amoled_tip_enable_warm,
+                            R.string.bc_amoled_breakdown,
+                            state.amoledWarmNearBlackCount,
                             state.amoledNonWarmNearBlackCount,
                         ),
                         style = MaterialTheme.typography.labelSmall,
-                        color = MaterialTheme.colorScheme.primary,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
+                    // Recommendation hint: only fires when Warm Tint is OFF
+                    // and the image has BOTH warm and non-warm near-black
+                    // pixels — the canonical case where enabling Warm Tint
+                    // protects real shadow detail from the blanket
+                    // blackening. In all other configurations the tip would
+                    // be either obvious (user already in warm mode) or
+                    // wrong (no non-warm pixels to protect / no warm
+                    // pixels to match), so we stay silent.
+                    if (!state.amoledWarmMode &&
+                        state.amoledWarmNearBlackCount > 0 &&
+                        state.amoledNonWarmNearBlackCount > 0
+                    ) {
+                        Text(
+                            text = stringResource(
+                                R.string.bc_amoled_tip_enable_warm,
+                                state.amoledNonWarmNearBlackCount,
+                            ),
+                            style = MaterialTheme.typography.labelSmall,
+                            color = MaterialTheme.colorScheme.primary,
+                        )
+                    }
                 }
             }
         }

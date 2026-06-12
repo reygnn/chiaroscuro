@@ -38,6 +38,9 @@
     <string name="bc_amoled">AMOLED</string>
     <string name="bc_amoled_threshold">Schwellenwert</string>
     <string name="bc_amoled_warm_tint">🌡 Warmton</string>
+    <string name="bc_amoled_perceptual">⚡ Perzeptuell (aggressiv)</string>
+    <string name="bc_amoled_perceptual_hint">Luma-basiert: entfernt auch farbiges Fast-Schwarz (tiefes Navy, Bordeaux, Petrol). Maximale AMOLED-Bereinigung — das Motiv kann sich verschieben.</string>
+    <string name="bc_amoled_warm_inactive">Warmton hat im perzeptuellen Modus keine Wirkung</string>
     <string name="bc_amoled_warm_hint">Nur warme Dunkeltöne (R-B&gt;3) — Schatten bleiben erhalten</string>
     <string name="bc_amoled_default_hint">Empfohlen: 5–15 für erhaltene Schatten, 30–50 für aggressive Korrektur</string>
     <string name="bc_amoled_near_black_stats">🔴 %1$d Pixel (%2$s%%) fast-schwarz</string>

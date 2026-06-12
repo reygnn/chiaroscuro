@@ -12,6 +12,7 @@ import com.github.reygnn.chiaroscuro.preferences.UserPreferences.Companion.AMOLE
 import com.github.reygnn.chiaroscuro.preferences.UserPreferences.Companion.AMOLED_THRESHOLD_MIN
 import com.github.reygnn.chiaroscuro.preferences.UserPreferences.Companion.DEFAULT_AMOLED_THRESHOLD
 import com.github.reygnn.chiaroscuro.preferences.UserPreferences.Companion.DEFAULT_AMOLED_WARM_MODE
+import com.github.reygnn.chiaroscuro.preferences.UserPreferences.Companion.DEFAULT_AMOLED_PERCEPTUAL
 import com.github.reygnn.chiaroscuro.preferences.UserPreferences.Companion.DEFAULT_EXPORT_BACKGROUND
 import com.github.reygnn.chiaroscuro.preferences.UserPreferences.Companion.DEFAULT_FAB_APPLY_AMOLED
 import com.github.reygnn.chiaroscuro.preferences.UserPreferences.Companion.DEFAULT_FAB_PLACE_RECT
@@ -59,6 +60,7 @@ internal class DataStorePreferencesRepository(
             UserPreferences(
                 amoledThreshold  = p[Keys.AMOLED_THRESHOLD]  ?: DEFAULT_AMOLED_THRESHOLD,
                 amoledWarmMode   = p[Keys.AMOLED_WARM_MODE]  ?: DEFAULT_AMOLED_WARM_MODE,
+                amoledPerceptual = p[Keys.AMOLED_PERCEPTUAL] ?: DEFAULT_AMOLED_PERCEPTUAL,
                 fabApplyAmoled   = p[Keys.FAB_APPLY_AMOLED]  ?: DEFAULT_FAB_APPLY_AMOLED,
                 fabPlaceRect     = p[Keys.FAB_PLACE_RECT]    ?: DEFAULT_FAB_PLACE_RECT,
                 rectX            = p[Keys.RECT_X]            ?: DEFAULT_RECT_X,
@@ -85,6 +87,10 @@ internal class DataStorePreferencesRepository(
 
     override suspend fun setAmoledWarmMode(enabled: Boolean) {
         dataStore.edit { it[Keys.AMOLED_WARM_MODE] = enabled }
+    }
+
+    override suspend fun setAmoledPerceptual(enabled: Boolean) {
+        dataStore.edit { it[Keys.AMOLED_PERCEPTUAL] = enabled }
     }
 
     override suspend fun setFabApplyAmoled(enabled: Boolean) {
@@ -152,6 +158,7 @@ internal class DataStorePreferencesRepository(
     private object Keys {
         val AMOLED_THRESHOLD  = intPreferencesKey("amoled_threshold")
         val AMOLED_WARM_MODE  = booleanPreferencesKey("amoled_warm_mode")
+        val AMOLED_PERCEPTUAL = booleanPreferencesKey("amoled_perceptual")
         val FAB_APPLY_AMOLED  = booleanPreferencesKey("fab_apply_amoled")
         val FAB_PLACE_RECT    = booleanPreferencesKey("fab_place_rect")
         val RECT_X            = floatPreferencesKey("rect_x")

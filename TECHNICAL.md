@@ -25,23 +25,24 @@ Architecture, data flow, design decisions, and contributor guide. For user-facin
 ## Stack
 
 ```
-agp                      = 8.13.2
-kotlin                   = 2.2.21
-composeBom               = 2026.03.01
+agp                      = 9.2.1
+kotlin                   = 2.3.21
+composeBom               = 2026.05.01
 datastore                = 1.2.1
-navigation               = 2.9.7
+navigation               = 2.9.8
 lifecycleRuntimeKtx      = 2.10.0
 
 # Testing
 junit                    = 4.13.2
-mockk                    = 1.13.13
-kotlinx-coroutines-test  = 1.9.0
-turbine                  = 1.1.0
+mockk                    = 1.14.9
+kotlinx-coroutines-test  = 1.11.0
+turbine                  = 1.2.1
 ```
 
 - Single-module Gradle project.
 - `minSdk = compileSdk = targetSdk = 36`.
-- JVM target 17 via `kotlin { compilerOptions { jvmTarget = JvmTarget.JVM_17 } }`.
+- JVM target 21 via `kotlin { compilerOptions { jvmTarget = JvmTarget.JVM_21 } }`.
+- AGP 9 with built-in Kotlin (no external `org.jetbrains.kotlin.android` plugin).
 - Full R8 (shrink + obfuscate + optimize), no compat mode.
 
 ---
@@ -128,7 +129,8 @@ app/src/main/java/com/github/reygnn/chiaroscuro/
 │   │   ├── AppIcons.kt           — 3 hand-defined ImageVectors (no material-icons-extended)
 │   │   ├── FormRows.kt           — IntTextFieldRow, StringTextFieldRow, IntSliderRow
 │   │   ├── ImageCanvas.kt        — Canvas composable, zoom/pan, rect overlay
-│   │   └── BottomControls.kt     — scrollable control panel
+│   │   ├── CommandsPanel.kt      — floating control card (sliders, AMOLED toggles)
+│   │   └── EditorFab.kt          — speed-dial FAB (load/save/analyze/rect/quick)
 │   └── theme/
 │       └── Theme.kt              — Material3 dark theme
 
@@ -276,8 +278,9 @@ All keys, defaults, and bounds are declared on `UserPreferences.Companion` as co
 ```
 Key                  Type      Default     Bounds              Description
 ──────────────────────────────────────────────────────────────────────────────────
-amoled_threshold     Int       50          [0, 50]             AMOLED filter threshold
-amoled_warm_mode     Boolean   false       —                   Warm tint mode
+amoled_threshold     Int       50          [0, 100]            AMOLED filter threshold
+amoled_warm_mode     Boolean   false       —                   Warm tint mode (per-channel rule only)
+amoled_perceptual    Boolean   true        —                   Luminance detection (default); ignores warm mode
 fab_apply_amoled     Boolean   true        —                   FAB: apply AMOLED step
 fab_place_rect       Boolean   true        —                   FAB: place rectangle step
 rect_x               Float     683f        unvalidated         Sparkle position (image px) — auto-saved on export

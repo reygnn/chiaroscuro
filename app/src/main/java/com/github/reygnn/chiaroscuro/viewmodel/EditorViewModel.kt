@@ -82,6 +82,7 @@ class EditorViewModel(
                     EditorPrefsView(
                         amoledThreshold = p.amoledThreshold,
                         amoledWarmMode  = p.amoledWarmMode,
+                        amoledPerceptual = p.amoledPerceptual,
                         rectX           = p.rectX,
                         rectY           = p.rectY,
                         rectWidth       = p.rectWidth,
@@ -95,6 +96,7 @@ class EditorViewModel(
                         it.copy(
                             amoledThreshold = v.amoledThreshold,
                             amoledWarmMode  = v.amoledWarmMode,
+                            amoledPerceptual = v.amoledPerceptual,
                             rectX           = v.rectX,
                             rectY           = v.rectY,
                             rectWidth       = v.rectWidth,
@@ -109,6 +111,7 @@ class EditorViewModel(
     private data class EditorPrefsView(
         val amoledThreshold: Int,
         val amoledWarmMode: Boolean,
+        val amoledPerceptual: Boolean,
         val rectX: Float,
         val rectY: Float,
         val rectWidth: Int,
@@ -159,6 +162,7 @@ class EditorViewModel(
                     // canvasSize: by omission, preserved (layout-sourced).
                     amoledThreshold   = p.amoledThreshold,
                     amoledWarmMode    = p.amoledWarmMode,
+                    amoledPerceptual  = p.amoledPerceptual,
                     amoledPixelCount  = 0,
                     amoledPercent     = 0f,
                     amoledWarmNearBlackCount    = 0,
@@ -304,7 +308,7 @@ class EditorViewModel(
             if (p.fabApplyAmoled) {
                 current = try {
                     withContext(Dispatchers.IO) {
-                        ImageProcessing.applyAmoledCorrection(current, p.amoledThreshold, p.amoledWarmMode)
+                        ImageProcessing.applyAmoledCorrection(current, p.amoledThreshold, p.amoledWarmMode, p.amoledPerceptual)
                     }
                 } catch (e: Exception) {
                     // Clear the spinner and surface the failure instead of
@@ -371,17 +375,34 @@ class EditorViewModel(
         viewModelScope.launch { repository.setAmoledWarmMode(newValue) }
     }
 
+    fun toggleAmoledPerceptual() {
+        val newValue = !_state.value.amoledPerceptual
+        _analysisBitmap.value = null
+        _state.update {
+            it.copy(
+                amoledPerceptual            = newValue,
+                showAmoledOverlay           = false,
+                amoledPixelCount            = 0,
+                amoledPercent               = 0f,
+                amoledWarmNearBlackCount    = 0,
+                amoledNonWarmNearBlackCount = 0,
+            )
+        }
+        viewModelScope.launch { repository.setAmoledPerceptual(newValue) }
+    }
+
     fun analyzeAmoled() {
         if (_state.value.isAnalyzing) return
         val src = _sourceBitmap.value ?: return
         val threshold = _state.value.amoledThreshold
         val warmMode = _state.value.amoledWarmMode
+        val perceptual = _state.value.amoledPerceptual
         val generation = loadGeneration
         viewModelScope.launch {
             _state.update { it.copy(isAnalyzing = true) }
             val analysis = try {
                 withContext(Dispatchers.IO) {
-                    ImageProcessing.analyzeAmoled(src, threshold, warmMode)
+                    ImageProcessing.analyzeAmoled(src, threshold, warmMode, perceptual)
                 }
             } catch (e: Exception) {
                 _state.update {
@@ -426,6 +447,7 @@ class EditorViewModel(
                         src,
                         _state.value.amoledThreshold,
                         _state.value.amoledWarmMode,
+                        _state.value.amoledPerceptual,
                     )
                 }
             } catch (e: Exception) {

@@ -143,6 +143,7 @@ fun EditorScreen(
                     onRectHeightChange = viewModel::setRectHeight,
                     onAmoledThreshold  = viewModel::setAmoledThreshold,
                     onToggleWarmMode   = viewModel::toggleAmoledWarmMode,
+                    onTogglePerceptual = viewModel::toggleAmoledPerceptual,
                     onClose            = { commandsOpen = false },
                     modifier = Modifier
                         .align(Alignment.Center)

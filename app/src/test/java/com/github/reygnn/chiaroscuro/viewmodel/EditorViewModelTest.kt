@@ -382,6 +382,22 @@ class EditorViewModelTest {
         }
 
     @Test
+    fun `toggleAmoledPerceptual flips perceptual mode, clears overlay, persists`() =
+        runTest(mainRule.testDispatcher) {
+            val repository = FakePreferencesRepository()
+            val vm = EditorViewModel(repository)
+            advanceUntilIdle()
+
+            val initial = vm.state.value.amoledPerceptual
+            vm.toggleAmoledPerceptual()
+            assertEquals(!initial, vm.state.value.amoledPerceptual)
+            assertFalse(vm.state.value.showAmoledOverlay)
+
+            advanceUntilIdle()
+            assertEquals(!initial, repository.current.amoledPerceptual)
+        }
+
+    @Test
     fun `clearAmoledAnalysis resets overlay and counts`() =
         runTest(mainRule.testDispatcher) {
             val repository = FakePreferencesRepository()

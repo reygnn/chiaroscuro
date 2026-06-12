@@ -38,6 +38,9 @@
     <string name="bc_amoled">AMOLED</string>
     <string name="bc_amoled_threshold">Threshold</string>
     <string name="bc_amoled_warm_tint">🌡 Warm Tint</string>
+    <string name="bc_amoled_perceptual">⚡ Perceptual (aggressive)</string>
+    <string name="bc_amoled_perceptual_hint">Luma-based: also removes colored near-black (deep navy, maroon, teal). Maximal AMOLED cleanup — motif may shift.</string>
+    <string name="bc_amoled_warm_inactive">Warm Tint has no effect in Perceptual mode</string>
     <string name="bc_amoled_warm_hint">Warm dark tones only (R-B&gt;3) — shadows preserved</string>
     <string name="bc_amoled_default_hint">Recommended: 5–15 to preserve shadows, 30–50 aggressive</string>
     <string name="bc_amoled_near_black_stats">🔴 %1$d pixels (%2$s%%) near-black</string>

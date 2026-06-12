@@ -41,6 +41,10 @@ internal class FakePreferencesRepository(
         _settings.value = _settings.value.copy(amoledWarmMode = enabled)
     }
 
+    override suspend fun setAmoledPerceptual(enabled: Boolean) {
+        _settings.value = _settings.value.copy(amoledPerceptual = enabled)
+    }
+
     override suspend fun setFabApplyAmoled(enabled: Boolean) {
         _settings.value = _settings.value.copy(fabApplyAmoled = enabled)
     }

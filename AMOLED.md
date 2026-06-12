@@ -9,14 +9,15 @@ For general usage see `README.md`. For architecture see `TECHNICAL.md`.
 ## Table of Contents
 
 1. [Why this exists](#why-this-exists)
-2. [The core rule: what counts as near-black](#the-core-rule-what-counts-as-near-black)
-3. [Warm Tint Mode](#warm-tint-mode)
-4. [Worked examples](#worked-examples)
-5. [Analyze vs Apply](#analyze-vs-apply)
-6. [Recommendation hint after Analyze](#recommendation-hint-after-analyze)
-7. [Choosing a threshold](#choosing-a-threshold)
-8. [What the correction does NOT do](#what-the-correction-does-not-do)
-9. [The exact code](#the-exact-code)
+2. [Detection mode: Per-channel vs Perceptual](#detection-mode-per-channel-vs-perceptual)
+3. [The core rule: what counts as near-black](#the-core-rule-what-counts-as-near-black)
+4. [Warm Tint Mode](#warm-tint-mode)
+5. [Worked examples](#worked-examples)
+6. [Analyze vs Apply](#analyze-vs-apply)
+7. [Recommendation hint after Analyze](#recommendation-hint-after-analyze)
+8. [Choosing a threshold](#choosing-a-threshold)
+9. [What the correction does NOT do](#what-the-correction-does-not-do)
+10. [The exact code](#the-exact-code)
 
 ---
 
@@ -30,7 +31,55 @@ The AMOLED correction finds these pixels and snaps them to pure `#000000`.
 
 ---
 
+## Detection mode: Per-channel vs Perceptual
+
+There are **two detection strategies**. The **Perceptual** switch in the
+Commands panel chooses between them. Perceptual is the **default**.
+
+### Perceptual (luminance) — the default
+
+A pixel is corrected when its **perceived brightness** is at or below the
+threshold, regardless of how that brightness is split across the channels:
+
+```
+luma = (54·R + 183·G + 19·B) >> 8        # 0..255, luma(white)=255, luma(black)=0
+match = (luma ≤ T) AND (R > 0 OR G > 0 OR B > 0)
+```
+
+The weights are integer BT.709-style coefficients that sum to 256, so the
+divide is a bit-shift. Green dominates because the eye is most sensitive to
+it — green/teal darks therefore read as "perceptually black" far sooner than
+the per-channel rule admits.
+
+Why it's the default: the per-channel rule structurally **misses low-luminance
+*colored* darks** — deep navy `(0,0,80)`, maroon, bottle-green — because one
+saturated channel sits above the threshold even though the pixel looks black.
+Those are exactly the fake-AMOLED pixels that waste the most battery on a
+synthetic wallpaper. Perceptual catches them; it is a **strict superset** of
+the (non-warm) per-channel match at the same threshold (proof: all channels
+≤ T ⇒ weighted mean ≤ T), so it never corrects *less* and additionally reaches
+colored darks the per-channel rule cannot match at any threshold ≤ 255.
+
+The trade-off: because it is hue-agnostic, Perceptual mode can shift the motif
+in genuinely colored-but-dark regions. **Warm Tint has no meaning here and is
+ignored** (the switch is disabled while Perceptual is on), and the Analyze
+warm/neutral breakdown and its recommendation are suppressed — the split is
+not defined for a luminance rule.
+
+### Per-channel (hue-preserving) — opt-in
+
+Turn Perceptual **off** to fall back to the original rule described in the next
+section: every channel must be ≤ threshold independently. This preserves hue
+(a saturated dark stays untouched) and is the rule that Warm Tint refines. Use
+it when you want neutral/cool shadow detail and colored darks left alone.
+
+---
+
 ## The core rule: what counts as near-black
+
+> This section describes the **per-channel** rule (Perceptual **off**). For
+> the luminance rule see [Detection mode](#detection-mode-per-channel-vs-perceptual)
+> above.
 
 A pixel is classified as near-black — and will be corrected — when **all three** of the following conditions are true simultaneously:
 
@@ -310,6 +359,22 @@ fun isNearBlack(argb: Int, threshold: Int, warmMode: Boolean): Boolean {
     return if (warmMode) nearBlack && (r - b) > WARM_TINT_MIN_DELTA else nearBlack
 }
 ```
+
+The perceptual rule lives in the same file:
+
+```kotlin
+fun isPerceptualBlack(argb: Int, threshold: Int): Boolean {
+    val r = (argb shr 16) and 0xFF
+    val g = (argb shr 8) and 0xFF
+    val b = argb and 0xFF
+    if (r == 0 && g == 0 && b == 0) return false
+    return (LUMA_R * r + LUMA_G * g + LUMA_B * b) shr 8 <= threshold
+}
+```
+
+with `LUMA_R = 54`, `LUMA_G = 183`, `LUMA_B = 19` (sum 256). Both rules are
+dispatched through `isFakeBlack(argb, threshold, mode, warmMode)`, where
+`mode` is `DetectionMode.PERCEPTUAL` (default) or `DetectionMode.PER_CHANNEL`.
 
 `WARM_TINT_MIN_DELTA` is a constant set to `3`. Changing it in code changes the warm-tint cutoff for all future matches.
 
